@@ -257,7 +257,8 @@ void MinigunAudioProcessorEditor::paint (juce::Graphics& g)
         : juce::String::fromUTF8 ("Kit folder: (unsaved) \xC2\xB7 samples copied on save");
     g.drawText (kitFolderText, footerBounds.reduced (0, 0), juce::Justification::centredLeft);
 
-    juce::String rightText = juce::String::fromUTF8 ("v0.1 \xC2\xB7 ") + juce::String (audioProcessor.getActiveVoiceCount()) + juce::String::fromUTF8 (" voices \xC2\xB7 outs ") + juce::String (audioProcessor.getUsableBusCount()) + "/17";
+    // JucePlugin_VersionString comes from project(Minigun VERSION x.y.z) in CMakeLists.txt.
+    juce::String rightText = juce::String ("v") + JucePlugin_VersionString + juce::String::fromUTF8 (" \xC2\xB7 ") + juce::String (audioProcessor.getActiveVoiceCount()) + juce::String::fromUTF8 (" voices \xC2\xB7 outs ") + juce::String (audioProcessor.getUsableBusCount()) + "/17";
     g.drawText (rightText, footerBounds, juce::Justification::centredRight);
 }
 
