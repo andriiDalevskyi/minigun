@@ -32,6 +32,8 @@ public:
     /** Receives every mouse-down in the window (registered as a listener on all children): a click
         anywhere outside a focused text field moves the keyboard focus back to the editor root. */
     void mouseDown (const juce::MouseEvent&) override;
+    /** juce::DragAndDropContainer: a pad drag has finished (dropped or abandoned) - undim the source pad. */
+    void dragOperationEnded (const juce::DragAndDropTarget::SourceDetails&) override;
 
 private:
     MinigunAudioProcessor& audioProcessor;
@@ -55,6 +57,11 @@ private:
         that will play (the audio thread's own hit report refreshes it a few ms later). */
     void auditionPad (int padIndex, int velocity);
     void handlePadDrop (int padIndex, juce::Array<juce::File> files);
+    /** A pad was dragged onto another one: asks for confirmation, then movePad(). */
+    void handlePadMoveRequest (int fromIndex, int toIndex);
+    /** Moves a pad's contents and settings onto another slot and empties the source. The note
+        number stays with the SLOT, since that is what the host plays. */
+    void movePad (int fromIndex, int toIndex);
 
     /** Adds files to a layer of the selected pad. layerIndex == -1 means "use
         layerEditor.getSelectedLayer()" (the default, used by BrowserPanel's "Add to Lx");

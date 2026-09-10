@@ -57,11 +57,20 @@ void PadComponent::paint (juce::Graphics& g)
     auto bounds = getLocalBounds().toFloat().reduced (kInset);
     const float cornerRadius = 10.0f;
 
+    const bool fileDragOver = (dragOver == DragOver::files);
+    const bool padDragOver  = (dragOver == DragOver::pad);
+
     juce::Colour top, bottom;
-    if (dragOver)
+    if (fileDragOver)
     {
         top = MinigunLookAndFeel::padDropTop;
         bottom = MinigunLookAndFeel::padDropBottom;
+    }
+    else if (padDragOver)
+    {
+        // A pad landing on this one replaces it: amber, the plug-in warning colour.
+        top = MinigunLookAndFeel::padHitTop;
+        bottom = MinigunLookAndFeel::padHitBottom;
     }
     else
     {
@@ -72,7 +81,7 @@ void PadComponent::paint (juce::Graphics& g)
     }
 
     // Glow shadow when hit.
-    if (glow > 0.01f && ! dragOver)
+    if (glow > 0.01f && dragOver == DragOver::none)
     {
         juce::DropShadow shadow (glowBottom.withAlpha (0.75f * glow), (int) (28.0f * glow), { 0, 0 });
         juce::Path padShape;
@@ -101,7 +110,7 @@ void PadComponent::paint (juce::Graphics& g)
         g.strokePath (inner, juce::PathStrokeType (1.5f), juce::AffineTransform::translation (0.0f, -1.2f));
     }
 
-    if (dragOver)
+    if (dragOver != DragOver::none)
     {
         juce::Path dashed;
         auto dropBounds = bounds.reduced (6.0f);
@@ -109,18 +118,25 @@ void PadComponent::paint (juce::Graphics& g)
         float dashLengths[] = { 4.0f, 3.0f };
         juce::Path strokedDashed;
         juce::PathStrokeType (2.0f).createDashedStroke (strokedDashed, dashed, dashLengths, 2);
-        g.setColour (MinigunLookAndFeel::teal);
+        g.setColour (padDragOver ? juce::Colour (0xff6b4612) : MinigunLookAndFeel::teal);
         g.fillPath (strokedDashed);
     }
 
+    // The pad being dragged reads as "picked up" while its copy follows the mouse.
+    if (dragging)
+    {
+        g.setColour (juce::Colours::black.withAlpha (0.35f));
+        g.fillRoundedRectangle (bounds, cornerRadius);
+    }
+
     // Text/number colours depend on state.
-    bool hot = glow > 0.5f;
+    bool hot = (glow > 0.5f) || padDragOver;
     juce::Colour numCol = hot ? juce::Colour (0xff6b4612) : juce::Colour (0xff9a9ea6);
     juce::Colour noteCol = hot ? juce::Colour (0xff6b4612) : juce::Colour (0xff5c6068);
-    juce::Colour nameCol = dragOver ? juce::Colour (0xff0f5e5b)
-                          : hot     ? juce::Colour (0xff2a1a04)
-                          : isEmpty ? juce::Colour (0xff8c9097)
-                                    : juce::Colour (0xff2a2c30);
+    juce::Colour nameCol = fileDragOver ? juce::Colour (0xff0f5e5b)
+                          : hot         ? juce::Colour (0xff2a1a04)
+                          : isEmpty     ? juce::Colour (0xff8c9097)
+                                        : juce::Colour (0xff2a2c30);
 
     auto content = bounds.reduced (10.0f);
 
@@ -136,7 +152,7 @@ void PadComponent::paint (juce::Graphics& g)
     g.drawText (noteText, bounds.reduced (10.0f).removeFromTop (14.0f), juce::Justification::topRight);
 
     // LED strip (loaded pads only).
-    if (! isEmpty && ! dragOver)
+    if (! isEmpty && dragOver == DragOver::none)
     {
         const int maxLeds = 8;
         const float ledW = 10.0f, ledH = 4.0f, gap = 3.0f;
@@ -156,10 +172,15 @@ void PadComponent::paint (juce::Graphics& g)
     auto nameArea = bounds.reduced (10.0f);
     nameArea = nameArea.removeFromBottom (18.0f);
     g.setColour (nameCol);
-    if (isEmpty)
+    if (padDragOver)
+    {
+        g.setFont (MinigunLookAndFeel::sansFont (13.0f, true));
+        g.drawText (isEmpty ? "MOVE HERE" : "REPLACE", nameArea, juce::Justification::centredLeft);
+    }
+    else if (isEmpty)
     {
         g.setFont (MinigunLookAndFeel::sansFont (12.0f, true));
-        g.drawText (dragOver ? "Drop here" : padName.toUpperCase(), nameArea, juce::Justification::centredLeft);
+        g.drawText (fileDragOver ? "Drop here" : padName.toUpperCase(), nameArea, juce::Justification::centredLeft);
     }
     else
     {
@@ -185,6 +206,33 @@ void PadComponent::mouseDown (const juce::MouseEvent& e)
     if (onTrigger) onTrigger (padIndex, velocity);
 }
 
+void PadComponent::mouseDrag (const juce::MouseEvent& e)
+{
+    // Only a loaded pad can be picked up, and only once the mouse has really travelled, so a
+    // normal hit with a shaky hand never turns into a drag.
+    if (dragging || isEmpty) return;
+    if (e.getDistanceFromDragStart() < 12) return;
+
+    if (auto* container = juce::DragAndDropContainer::findParentDragContainerFor (this))
+    {
+        dragging = true;
+        repaint();
+
+        // The drag image is the pad itself, semi-transparent, so it is obvious what is moving.
+        auto snapshot = createComponentSnapshot (getLocalBounds(), true);
+        juce::Image faded (juce::Image::ARGB, snapshot.getWidth(), snapshot.getHeight(), true);
+        {
+            juce::Graphics ig (faded);
+            ig.setOpacity (0.7f);
+            ig.drawImageAt (snapshot, 0, 0);
+        }
+
+        auto offset = -e.getPosition();
+        container->startDragging (makePadDragDescription (padIndex), this,
+                                  juce::ScaledImage (faded), false, &offset, &e.source);
+    }
+}
+
 bool PadComponent::hasAudioExtension (const juce::String& path)
 {
     static const char* exts[] = { ".wav", ".aif", ".aiff", ".flac", ".ogg", ".mp3", ".wma" };
@@ -203,19 +251,19 @@ bool PadComponent::isInterestedInFileDrag (const juce::StringArray& files)
 
 void PadComponent::fileDragEnter (const juce::StringArray&, int, int)
 {
-    dragOver = true;
+    dragOver = DragOver::files;
     repaint();
 }
 
 void PadComponent::fileDragExit (const juce::StringArray&)
 {
-    dragOver = false;
+    dragOver = DragOver::none;
     repaint();
 }
 
 void PadComponent::filesDropped (const juce::StringArray& files, int, int)
 {
-    dragOver = false;
+    dragOver = DragOver::none;
     juce::Array<juce::File> audioFiles;
     for (auto& f : files)
         if (hasAudioExtension (f)) audioFiles.add (juce::File (f));
@@ -228,28 +276,51 @@ void PadComponent::filesDropped (const juce::StringArray& files, int, int)
 
 bool PadComponent::isInterestedInDragSource (const SourceDetails& details)
 {
+    const int sourcePad = padIndexFromDragDescription (details.description);
+    if (sourcePad >= 0)
+        return sourcePad != padIndex; // a pad dropped on itself is a no-op
+
     return filesFromDragDescription (details.description).size() > 0;
 }
 
-void PadComponent::itemDragEnter (const SourceDetails&)
+void PadComponent::itemDragEnter (const SourceDetails& details)
 {
-    dragOver = true;
+    dragOver = padIndexFromDragDescription (details.description) >= 0 ? DragOver::pad : DragOver::files;
     repaint();
 }
 
 void PadComponent::itemDragExit (const SourceDetails&)
 {
-    dragOver = false;
+    dragOver = DragOver::none;
     repaint();
 }
 
 void PadComponent::itemDropped (const SourceDetails& details)
 {
-    dragOver = false;
+    dragOver = DragOver::none;
+
+    const int sourcePad = padIndexFromDragDescription (details.description);
+    if (sourcePad >= 0)
+    {
+        if (sourcePad != padIndex && onPadDroppedOnPad)
+            onPadDroppedOnPad (sourcePad, padIndex);
+        repaint();
+        return;
+    }
+
     auto files = filesFromDragDescription (details.description);
     if (! files.isEmpty() && onFilesDropped)
         onFilesDropped (padIndex, files);
     repaint();
+}
+
+void PadComponent::setDragSourceHighlight (bool shouldBeDragging)
+{
+    if (dragging != shouldBeDragging)
+    {
+        dragging = shouldBeDragging;
+        repaint();
+    }
 }
 
 juce::var PadComponent::makeDragDescription (const juce::Array<juce::File>& files)
@@ -258,6 +329,22 @@ juce::var PadComponent::makeDragDescription (const juce::Array<juce::File>& file
     for (auto& f : files)
         arr.add (f.getFullPathName());
     return juce::var (arr);
+}
+
+juce::var PadComponent::makePadDragDescription (int index)
+{
+    auto* obj = new juce::DynamicObject();
+    obj->setProperty ("minigunPad", index);
+    return juce::var (obj);
+}
+
+int PadComponent::padIndexFromDragDescription (const juce::var& description)
+{
+    if (auto* obj = description.getDynamicObject())
+        if (obj->hasProperty ("minigunPad"))
+            return juce::jlimit (-1, 15 /* pad grid is fixed at 16 */, (int) obj->getProperty ("minigunPad"));
+
+    return -1;
 }
 
 juce::Array<juce::File> PadComponent::filesFromDragDescription (const juce::var& description)

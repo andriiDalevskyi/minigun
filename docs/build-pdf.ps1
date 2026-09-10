@@ -2,7 +2,8 @@
 $edge = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 $docs = $PSScriptRoot
 foreach ($pair in @(@("manual_en.html", "Minigun_User_Manual_EN.pdf"), @("manual_uk.html", "Minigun_Instrukciya_UA.pdf"))) {
-    $src = "file:///" + ($docs -replace '\', '/') + "/" + $pair[0]
+    # -replace takes a REGEX pattern, so a literal backslash must be doubled.
+    $src = "file:///" + ($docs -replace '\\', '/') + "/" + $pair[0]
     $out = Join-Path $docs $pair[1]
     Start-Process -FilePath $edge -ArgumentList "--headless=new", "--disable-gpu", "--no-pdf-header-footer", "--user-data-dir=$env:TEMP\edge-pdf", "--print-to-pdf=`"$out`"", "--virtual-time-budget=8000", $src -Wait
     Write-Host "wrote $out"

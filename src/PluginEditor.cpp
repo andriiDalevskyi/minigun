@@ -40,6 +40,7 @@ MinigunAudioProcessorEditor::MinigunAudioProcessorEditor (MinigunAudioProcessor&
     padGrid.onTrigger = [this] (int idx, int vel) { auditionPad (idx, vel); };
     layerEditor.onAudition = [this] (int vel) { auditionPad (audioProcessor.getSelectedPad(), vel); };
     padGrid.onFilesDropped = [this] (int idx, juce::Array<juce::File> files) { handlePadDrop (idx, files); };
+    padGrid.onPadMoveRequested = [this] (int from, int to) { handlePadMoveRequest (from, to); };
 
     browser.onAddToLayer = [this] (juce::Array<juce::File> files) { handleAddToLayer (files); };
     layerEditor.onFilesDroppedOnLayer = [this] (int idx, juce::Array<juce::File> files) { handleAddToLayer (files, idx); };
@@ -122,6 +123,82 @@ void MinigunAudioProcessorEditor::handlePadDrop (int padIndex, juce::Array<juce:
     refreshAll();
 }
 
+// Pad N (NAME) / Pad N (empty) - used in the move confirmation text.
+static juce::String padLabel (const minigun::Pad& pad, int index)
+{
+    auto name = pad.isEmpty() ? juce::String ("empty")
+                              : (pad.name.isNotEmpty() ? pad.name : juce::String ("unnamed"));
+    return "pad " + juce::String (index + 1) + " (" + name + ")";
+}
+
+void MinigunAudioProcessorEditor::handlePadMoveRequest (int fromIndex, int toIndex)
+{
+    if (fromIndex == toIndex) return;
+    if (! juce::isPositiveAndBelow (fromIndex, minigun::kNumPads)) return;
+    if (! juce::isPositiveAndBelow (toIndex, minigun::kNumPads)) return;
+
+    const auto& kit = audioProcessor.getKit();
+    const auto& src = kit.pads[(size_t) fromIndex];
+    const auto& dst = kit.pads[(size_t) toIndex];
+    if (src.isEmpty()) return; // nothing to move
+
+    const juce::String message = dst.isEmpty()
+        ? "Move " + padLabel (src, fromIndex) + " to empty pad " + juce::String (toIndex + 1) + "?\n\n"
+          "Pad " + juce::String (fromIndex + 1) + " will become empty."
+        : "Replace " + padLabel (dst, toIndex) + " with " + padLabel (src, fromIndex) + "?\n\n"
+          "Pad " + juce::String (toIndex + 1) + "'s samples and settings are lost, and pad "
+          + juce::String (fromIndex + 1) + " becomes empty. Ctrl+Z undoes this.";
+
+    const auto options = juce::MessageBoxOptions()
+                             .withIconType (juce::MessageBoxIconType::QuestionIcon)
+                             .withTitle ("Move pad")
+                             .withMessage (message)
+                             .withButton ("Move")
+                             .withButton ("Cancel")
+                             .withAssociatedComponent (this)
+                             .withParentComponent (this); // keep the dialog inside the plug-in window
+
+    // SafePointer: the host can close the editor while the dialog is up.
+    juce::Component::SafePointer<MinigunAudioProcessorEditor> safeThis (this);
+    juce::AlertWindow::showAsync (options, [safeThis, fromIndex, toIndex] (int result)
+    {
+        if (safeThis == nullptr) return;
+
+        if (result == 1) // 1 = the first button ("Move")
+            safeThis->movePad (fromIndex, toIndex);
+
+        // The dismissed dialog leaves no keyboard focus behind, and the dialog itself promises
+        // Ctrl+Z, so hand focus back to the editor root instead of making the user click first.
+        safeThis->grabKeyboardFocus();
+    });
+}
+
+void MinigunAudioProcessorEditor::movePad (int fromIndex, int toIndex)
+{
+    if (fromIndex == toIndex) return;
+    if (! juce::isPositiveAndBelow (fromIndex, minigun::kNumPads)) return;
+    if (! juce::isPositiveAndBelow (toIndex, minigun::kNumPads)) return;
+
+    auto& kit = audioProcessor.getKit();
+    auto moved = kit.pads[(size_t) fromIndex]; // by value: the source slot is about to be reset
+    if (moved.isEmpty()) return;
+
+    const int sourceNote = kit.pads[(size_t) fromIndex].note;
+    const int destNote = kit.pads[(size_t) toIndex].note;
+
+    minigun::Pad emptied;              // a default pad, keeping the slot's own note
+    emptied.note = sourceNote;
+    kit.pads[(size_t) fromIndex] = emptied;
+
+    moved.note = destNote;             // the note belongs to the slot, not to the samples
+    kit.pads[(size_t) toIndex] = std::move (moved);
+
+    audioProcessor.setSelectedPad (toIndex);
+    audioProcessor.kitEdited();
+    layerEditor.notifyPadChanged();
+    refreshAll();
+}
+
 void MinigunAudioProcessorEditor::handleAddToLayer (juce::Array<juce::File> files, int layerIndex)
 {
     if (files.isEmpty()) return;
@@ -154,6 +231,11 @@ void MinigunAudioProcessorEditor::mouseDown (const juce::MouseEvent& e)
         if (clicked != focused && ! focused->isParentOf (clicked))
             grabKeyboardFocus();
     }
+}
+
+void MinigunAudioProcessorEditor::dragOperationEnded (const juce::DragAndDropTarget::SourceDetails&)
+{
+    padGrid.clearPadDragState();
 }
 
 bool MinigunAudioProcessorEditor::keyPressed (const juce::KeyPress& key)

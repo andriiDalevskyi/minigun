@@ -21,7 +21,8 @@ inline juce::String noteToShortName (int note)
 
 /** One 118x118 drum pad. Shows number, note, name, an LED strip for layer count, and
     reacts to click (velocity from Y) and file drag/drop (both OS files and internal
-    drags originating from BrowserPanel). */
+    drags originating from BrowserPanel). A loaded pad is also a drag SOURCE: dragging it
+    onto another pad asks PluginEditor to move (and replace) the pad. */
 class PadComponent : public juce::Component,
                      public juce::FileDragAndDropTarget,
                      public juce::DragAndDropTarget
@@ -36,6 +37,9 @@ public:
 
     void setPadData (const juce::String& name, int note, int layerCount, bool empty);
     void setSelected (bool shouldBeSelected);
+    /** Dims the pad while it is the source of a pad-to-pad drag; PadGrid clears it when the
+        drag ends (the drag container, not the pad, is what gets told the drag is over). */
+    void setDragSourceHighlight (bool shouldBeDragging);
     void setGlow (float amount); // 0..1, 1 = full hit brightness
     /** Colour the glow takes at full brightness (defaults to the amber hit colour). Set before
         setGlow() when a hit arrives so the pad lights up in its velocity layer's colour. */
@@ -47,9 +51,12 @@ public:
     std::function<void (int padIndex, int velocity)> onTrigger;
     std::function<void (int padIndex)> onSelect;
     std::function<void (int padIndex, juce::Array<juce::File>)> onFilesDropped;
+    /** A pad was dragged onto this one: move sourcePadIndex -> targetPadIndex (asks first). */
+    std::function<void (int sourcePadIndex, int targetPadIndex)> onPadDroppedOnPad;
 
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
+    void mouseDrag (const juce::MouseEvent&) override;
 
     // juce::FileDragAndDropTarget
     bool isInterestedInFileDrag (const juce::StringArray& files) override;
@@ -68,6 +75,12 @@ public:
     static juce::var makeDragDescription (const juce::Array<juce::File>& files);
     static juce::Array<juce::File> filesFromDragDescription (const juce::var& description);
 
+    /** Description of a pad-to-pad drag: an object with a single "minigunPad" property. Kept
+        distinct from the file-drag format so a layer/pad target can tell the two apart. */
+    static juce::var makePadDragDescription (int padIndex);
+    /** Pad index carried by a pad-to-pad drag description, or -1 if it is not one. */
+    static int padIndexFromDragDescription (const juce::var& description);
+
     /** True if the path has a recognised audio file extension (wav aif aiff flac ogg mp3 wma). */
     static bool hasAudioExtension (const juce::String& path);
 
@@ -78,7 +91,9 @@ private:
     int layerCount = 0;
     bool isEmpty = true;
     bool selected = false;
-    bool dragOver = false;
+    enum class DragOver { none, files, pad };
+    DragOver dragOver = DragOver::none;
+    bool dragging = false; // this pad is the source of a pad-to-pad drag
     float glow = 0.0f;
     juce::Colour glowTop { 0xffffd08a }, glowBottom { 0xfff2a33a }; // MinigunLookAndFeel::padHitTop/Bottom
 

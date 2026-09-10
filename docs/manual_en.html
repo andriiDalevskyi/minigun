@@ -10,7 +10,7 @@
 <section class="cover">
   <div class="brand">MINIGUN</div>
   <h1>Minigun Drum Sampler</h1>
-  <div class="sub">User Manual · VST3 &amp; Standalone · version 0.3.6</div>
+  <div class="sub">User Manual · VST3 &amp; Standalone · version 0.3.7</div>
   <img src="img/ui_full.png" alt="Minigun main window">
   <div class="meta">16 pads · velocity layers · round-robin / random · portable kits · 17 stereo outputs<br>Windows 10/11, 64-bit. Built with JUCE 8.</div>
 </section>
@@ -73,6 +73,7 @@
       <li><strong>Click</strong> a pad to select it and play it. The velocity follows the click height: top edge = 127, bottom edge = 1.</li>
       <li><strong>Drop audio files</strong> from Explorer or from the Browser onto a pad. They join the pad's <strong>active layer</strong> (the layer selected in §6; for a pad that is not selected, its top layer). An empty pad gets its first layer (1–127) automatically. New layers are only created with <strong>+ LAYER</strong>.</li>
       <li>A pad is named automatically after its first sample when it has no name yet.</li>
+      <li><strong>Move a pad onto another pad</strong> — built the pad in the wrong slot? Press it and drag it onto the slot you wanted. The target pad turns amber and reads <em>REPLACE</em> (or <em>MOVE HERE</em> when it is empty). On release Minigun asks for confirmation: <strong>Move</strong> transfers the samples and every pad setting and <strong>overwrites</strong> the target, <strong>Cancel</strong> does nothing. The original pad is left empty. Notes do not travel: each slot keeps its own MIDI note. <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes the move.</li>
     </ul>
   </div>
 </div>
@@ -220,6 +221,7 @@
   <tr><th>Where</th><th>Gesture</th><th>Result</th></tr>
   <tr><td>Pad</td><td>Click (top / bottom)</td><td>Play loud / soft, select the pad</td></tr>
   <tr><td>Pad</td><td>Drop files</td><td>Add the files to the active layer</td></tr>
+  <tr><td>Pad</td><td>Drag onto another pad</td><td>Move the pad there after confirming (overwrites it, empties the original)</td></tr>
   <tr><td>Range bar</td><td>Click segment</td><td>Audition that layer (RR/RND applies)</td></tr>
   <tr><td>Range bar</td><td>Drag divider</td><td>Change velocity ranges</td></tr>
   <tr><td>Layer row</td><td>× / right-click, or − LAYER</td><td>Delete layer</td></tr>

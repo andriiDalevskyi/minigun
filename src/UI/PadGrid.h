@@ -29,6 +29,11 @@ public:
     std::function<void (int padIndex, int velocity)> onTrigger;
     std::function<void (int padIndex)> onSelect;
     std::function<void (int padIndex, juce::Array<juce::File>)> onFilesDropped;
+    /** A pad was dragged onto another pad; PluginEditor asks for confirmation and moves it. */
+    std::function<void (int sourcePadIndex, int targetPadIndex)> onPadMoveRequested;
+
+    /** Clears the "picked up" dimming on every pad; call when a pad drag ends, dropped or not. */
+    void clearPadDragState();
 
     void resized() override;
     void paint (juce::Graphics&) override;

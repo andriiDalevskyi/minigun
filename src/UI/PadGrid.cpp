@@ -20,6 +20,10 @@ PadGrid::PadGrid()
         {
             if (onFilesDropped) onFilesDropped (idx, files);
         };
+        pad->onPadDroppedOnPad = [this] (int from, int to)
+        {
+            if (onPadMoveRequested) onPadMoveRequested (from, to);
+        };
         addAndMakeVisible (*pad);
         pads[(size_t) i] = std::move (pad);
     }
@@ -33,6 +37,12 @@ void PadGrid::refresh (const Kit& kit, int selectedPad)
         pads[(size_t) i]->setPadData (p.name, p.note, (int) p.layers.size(), p.isEmpty());
         pads[(size_t) i]->setSelected (i == selectedPad);
     }
+}
+
+void PadGrid::clearPadDragState()
+{
+    for (auto& p : pads)
+        p->setDragSourceHighlight (false);
 }
 
 void PadGrid::setPadGlow (int padIndex, float glow)
