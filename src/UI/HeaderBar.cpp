@@ -51,6 +51,13 @@ HeaderBar::HeaderBar (MinigunAudioProcessor& processorIn) : processor (processor
 
     saveButton.onClick = [this] { saveKit(); };
     loadButton.onClick = [this] { loadKit(); };
+
+    undoButton.setTooltip ("Undo (Ctrl+Z)");
+    redoButton.setTooltip ("Redo (Ctrl+Y / Ctrl+Shift+Z)");
+    undoButton.onClick = [this] { processor.undo(); };
+    redoButton.onClick = [this] { processor.redo(); };
+    addAndMakeVisible (undoButton);
+    addAndMakeVisible (redoButton);
     addAndMakeVisible (saveButton);
     addAndMakeVisible (loadButton);
 
@@ -71,6 +78,11 @@ void HeaderBar::refreshKitInfo()
     kitName = kit.name;
     padCount = kit.loadedPadCount();
     sampleCount = kit.totalSamples();
+
+    undoButton.setEnabled (processor.canUndo());
+    undoButton.setAlpha (processor.canUndo() ? 1.0f : 0.35f);
+    redoButton.setEnabled (processor.canRedo());
+    redoButton.setAlpha (processor.canRedo() ? 1.0f : 0.35f);
     repaint();
 }
 
@@ -222,6 +234,10 @@ void HeaderBar::resized()
     saveButton.setBounds (area.removeFromLeft (110).withHeight (30).withY (midY - 15));
     area.removeFromLeft (10);
     loadButton.setBounds (area.removeFromLeft (110).withHeight (30).withY (midY - 15));
+    area.removeFromLeft (16);
+    undoButton.setBounds (area.removeFromLeft (62).withHeight (30).withY (midY - 15));
+    area.removeFromLeft (6);
+    redoButton.setBounds (area.removeFromLeft (62).withHeight (30).withY (midY - 15));
 
     auto right = getLocalBounds().reduced (24, 0);
     masterKnob.setBounds (right.removeFromRight (34).withHeight (34).withY (midY - 17));

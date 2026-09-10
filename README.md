@@ -13,6 +13,7 @@ Lightweight VST3 / Standalone drum sampler built with JUCE 8. Sixteen MPC-style 
 - **Per-pad settings**: MIDI note (drop-down + number field, MIDI learn), choke group, volume, pan, pitch ±12 st, attack / decay / release.
 - **Outputs**: Main + 16 aux stereo buses (34 channels). Each pad picks its bus and can go **stereo** or **mono** to a single channel, with optional stereo-to-mono summing.
 - **Pads glow in the colour of the layer that played**, from MIDI and from mouse clicks alike.
+- **Undo / Redo** for every kit edit (header buttons, Ctrl+Z / Ctrl+Y), with knob sweeps and typing merged into single steps.
 - **Built-in browser** with instant preview, drag & drop to pads or layers, editable path, drive list, Backspace / Alt+arrows / mouse Back-Forward navigation.
 - **Portable kits**: *Save kit* copies every sample into `<kit>/samples/` and writes `kit.json` with relative paths, so a kit folder can be moved between projects and machines. The full kit is also stored in the DAW project.
 - Formats: WAV, AIFF, FLAC, OGG, MP3, WMA.
@@ -107,6 +108,7 @@ Binaries in the Releases section are built from this source; the corresponding s
 - **Налаштування педа**: MIDI-нота (дропдаун + числове поле, MIDI learn), choke-група, гучність, панорама, висота ±12 півтонів, attack / decay / release.
 - **Виходи**: Main + 16 додаткових стерео-шин (34 канали). Кожен пед обирає шину і може йти **стерео** або **моно** на один канал, з опційним сумуванням стерео-семпла в моно.
 - **Педи світяться кольором леєра, який зіграв**, і від MIDI, і від кліку мишею.
+- **Undo / Redo** для всіх змін кіта (кнопки в шапці, Ctrl+Z / Ctrl+Y); обертання регулятора чи набір назви — один крок.
 - **Вбудований браузер** із миттєвим прослуховуванням, перетягуванням на педи чи леєри, редагованим шляхом, списком дисків, навігацією Backspace / Alt+стрілки / бічні кнопки миші.
 - **Портативні кіти**: *Save kit* копіює всі семпли в `<кіт>/samples/` і пише `kit.json` з відносними шляхами, тож теку кіта можна переносити між проєктами й комп'ютерами. Повний кіт також зберігається в проєкті DAW.
 - Формати: WAV, AIFF, FLAC, OGG, MP3, WMA.

@@ -55,6 +55,17 @@ public:
         thread, and calls sendChangeMessage() so all UI panels refresh. */
     void kitEdited();
 
+    //==============================================================================
+    // Undo / redo. Every kitEdited() call records a history step (a serialized Kit snapshot).
+    // Edits closer together than ~0.7 s, or inside a begin/endUndoGesture() pair (knob drags),
+    // are merged into the previous step so a knob sweep or typing a name is one undo.
+    void undo();
+    void redo();
+    bool canUndo() const noexcept { return ! undoStack.empty(); }
+    bool canRedo() const noexcept { return ! redoStack.empty(); }
+    void beginUndoGesture() noexcept { ++undoGestureDepth; }
+    void endUndoGesture() noexcept   { undoGestureDepth = juce::jmax (0, undoGestureDepth - 1); }
+
     int getSelectedPad() const noexcept { return selectedPad; }
     void setSelectedPad (int index) noexcept { selectedPad = juce::jlimit (0, minigun::kNumPads - 1, index); }
 
@@ -106,6 +117,19 @@ private:
 
     minigun::Kit kit;
     int selectedPad = 0;
+
+    // Undo history: serialized kit snapshots (JSON with absolute paths + kit folder).
+    std::vector<juce::String> undoStack, redoStack;
+    juce::String committedState;          // snapshot of the kit as last recorded in history
+    juce::uint32 lastCommitMs = 0;
+    int undoGestureDepth = 0;
+    static constexpr size_t kMaxUndoSteps = 200;
+    static constexpr juce::uint32 kUndoMergeWindowMs = 700;
+
+    juce::String snapshotKit() const;
+    void applySnapshot (const juce::String& snapshot);
+    void resetUndoHistory();
+    void publishKit();                    // steps (a)-(c) of kitEdited() without touching history
 
     minigun::SampleLoader sampleLoader;
     minigun::SamplerEngine samplerEngine;

@@ -39,6 +39,8 @@ private:
 
     juce::TextButton saveButton { "Save kit" };
     juce::TextButton loadButton { "Load kit" };
+    juce::TextButton undoButton { "Undo" };
+    juce::TextButton redoButton { "Redo" };
     juce::Slider masterKnob;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> masterAttachment;
     std::unique_ptr<juce::FileChooser> fileChooser;

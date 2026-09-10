@@ -29,7 +29,7 @@
 <h2 class="pagebreak">2. Interface overview</h2>
 <figure><img src="img/ui_full.png" alt="Main window"><figcaption>The fixed 1200 × 720 window. Everything is always visible; nothing is hidden in menus.</figcaption></figure>
 <ol class="callouts">
-  <li><strong>Header</strong> — kit name, Save / Load kit, MIDI indicator, output meter, master volume.</li>
+  <li><strong>Header</strong> — kit name, Save / Load kit, Undo / Redo, MIDI indicator, output meter, master volume.</li>
   <li><strong>Pads</strong> — 16 pads in MPC order (pad 1 bottom-left, pad 13 top-left). Click to play, drop audio files to assign.</li>
   <li><strong>Pad editor</strong> — every setting of the selected pad: name, note, choke, output, mix and envelope knobs.</li>
   <li><strong>Velocity layers</strong> — the velocity map of the selected pad and the samples inside each layer.</li>
@@ -44,6 +44,7 @@
   <tr><td>KIT display</td><td>Shows the kit name, how many pads have samples and the total sample count. The name is taken from the folder you save into (a kit called <em>Untitled Kit</em> is renamed automatically on first save).</td></tr>
   <tr><td>SAVE KIT</td><td>Saves the kit. The first time it opens a folder picker (default location: <code>Documents\Minigun Kits</code>). Choose or create a folder: Minigun writes <code>kit.json</code> there and <strong>copies every sample</strong> into a <code>samples\</code> sub-folder. If the kit already has a folder, it saves there directly without asking.</td></tr>
   <tr><td>LOAD KIT</td><td>Opens a folder picker. Select a folder that contains <code>kit.json</code>; all pads, layers and settings are replaced by that kit.</td></tr>
+  <tr><td>UNDO / REDO</td><td>Step back and forward through every kit edit: knob moves, names, notes, layers, dropped samples, even a loaded kit. A continuous knob sweep or typing a name counts as one step. Keyboard: <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo, <kbd>Ctrl</kbd>+<kbd>Y</kbd> or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> redo (the plug-in window must have keyboard focus: click on it first). Up to 200 steps; the history is cleared when a project is reopened.</td></tr>
   <tr><td>MIDI</td><td>Lights amber for a moment whenever a MIDI note-on arrives. Use it to confirm the DAW is routing MIDI to the plug-in.</td></tr>
   <tr><td>OUT</td><td>Eight-segment stereo peak meter of the plug-in output (the loudest of all enabled buses). Teal segments are healthy, amber is hot.</td></tr>
   <tr><td>Master knob</td><td>Master volume, −60 … +6 dB. This is the only DAW-automatable parameter; everything else belongs to the kit.</td></tr>
@@ -228,6 +229,7 @@
   <tr><td>Browser</td><td>Mouse Back / Forward, <kbd>Alt</kbd>+<kbd>←</kbd>/<kbd>→</kbd></td><td>History back / forward</td></tr>
   <tr><td>Browser</td><td>Double-click / <kbd>Enter</kbd></td><td>Open folder or add file to the selected layer</td></tr>
   <tr><td>Path field</td><td>Type path + <kbd>Enter</kbd></td><td>Jump to folder or file</td></tr>
+  <tr><td>Anywhere</td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Undo / redo the last kit edit</td></tr>
 </table>
 
 <h2>12. Footer and troubleshooting</h2>

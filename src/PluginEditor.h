@@ -28,6 +28,7 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    bool keyPressed (const juce::KeyPress&) override; // Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z
 
 private:
     MinigunAudioProcessor& audioProcessor;

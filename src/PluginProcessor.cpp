@@ -6,6 +6,7 @@
 #include "PluginEditor.h"
 #include "Engine/EngineKit.h"
 #include "Model/KitStore.h"
+#include <cstring>
 
 namespace
 {
@@ -27,7 +28,8 @@ MinigunAudioProcessor::MinigunAudioProcessor()
     : AudioProcessor (makeBusesProperties()),
       apvts (*this, nullptr, "PARAMETERS", createParameterLayout())
 {
-    kitEdited(); // publish the initial (empty) kit snapshot
+    resetUndoHistory();
+    publishKit(); // publish the initial (empty) kit snapshot
     startTimerHz (30);
 }
 
@@ -129,6 +131,28 @@ juce::AudioProcessorEditor* MinigunAudioProcessor::createEditor()
 //==============================================================================
 void MinigunAudioProcessor::kitEdited()
 {
+    const auto snap = snapshotKit();
+    if (snap != committedState)
+    {
+        const auto now = juce::Time::getMillisecondCounter();
+        const bool merge = undoGestureDepth > 0 || (now - lastCommitMs) < kUndoMergeWindowMs;
+
+        if (! merge)
+        {
+            undoStack.push_back (committedState);
+            if (undoStack.size() > kMaxUndoSteps)
+                undoStack.erase (undoStack.begin());
+        }
+        redoStack.clear();
+        committedState = snap;
+        lastCommitMs = now;
+    }
+
+    publishKit();
+}
+
+void MinigunAudioProcessor::publishKit()
+{
     // (a) Synchronously (re)load samples on the message thread; flag missing files.
     for (auto& pad : kit.pads)
         for (auto& layer : pad.layers)
@@ -140,6 +164,57 @@ void MinigunAudioProcessor::kitEdited()
 
     // (c) Notify all UI panels.
     sendChangeMessage();
+}
+
+//==============================================================================
+static const char* const kSnapshotFolderSeparator = "\n@@kit-folder@@\n";
+
+juce::String MinigunAudioProcessor::snapshotKit() const
+{
+    return kit.toJsonString (juce::File()) + kSnapshotFolderSeparator + kit.folder.getFullPathName();
+}
+
+void MinigunAudioProcessor::applySnapshot (const juce::String& snapshot)
+{
+    const int sep = snapshot.lastIndexOf (kSnapshotFolderSeparator);
+    const auto json = sep >= 0 ? snapshot.substring (0, sep) : snapshot;
+    const auto folderPath = sep >= 0 ? snapshot.substring (sep + (int) std::strlen (kSnapshotFolderSeparator)) : juce::String();
+
+    minigun::Kit restored;
+    if (! restored.fromJsonString (json, juce::File()))
+        return;
+    restored.folder = folderPath.isNotEmpty() ? juce::File (folderPath) : juce::File();
+
+    kit = std::move (restored);
+    committedState = snapshot;
+    lastCommitMs = 0; // the next edit must start a fresh history step
+    publishKit();
+}
+
+void MinigunAudioProcessor::undo()
+{
+    if (undoStack.empty()) return;
+    redoStack.push_back (committedState);
+    auto snap = undoStack.back();
+    undoStack.pop_back();
+    applySnapshot (snap);
+}
+
+void MinigunAudioProcessor::redo()
+{
+    if (redoStack.empty()) return;
+    undoStack.push_back (committedState);
+    auto snap = redoStack.back();
+    redoStack.pop_back();
+    applySnapshot (snap);
+}
+
+void MinigunAudioProcessor::resetUndoHistory()
+{
+    undoStack.clear();
+    redoStack.clear();
+    committedState = snapshotKit();
+    lastCommitMs = 0;
 }
 
 void MinigunAudioProcessor::triggerPad (int padIndex, int velocity)
@@ -243,7 +318,8 @@ void MinigunAudioProcessor::setStateInformation (const void* data, int sizeInByt
         {
             kit = std::move (loaded);
             selectedPad = 0;
-            kitEdited();
+            resetUndoHistory(); // a restored project starts with a clean history
+            publishKit();
         }
     }
 }

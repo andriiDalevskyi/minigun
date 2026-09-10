@@ -164,6 +164,8 @@ PadEditorPanel::PadEditorPanel (MinigunAudioProcessor& processorIn) : processor 
         k->valueLabel.setColour (juce::Label::textColourId, MinigunLookAndFeel::text);
         k->nameLabel.setInterceptsMouseClicks (false, false);  // let clicks on labels reach the panel (focus release)
         k->valueLabel.setInterceptsMouseClicks (false, false);
+        k->slider.onDragStart = [this] { processor.beginUndoGesture(); }; // a whole knob sweep = one undo step
+        k->slider.onDragEnd   = [this] { processor.endUndoGesture(); };
         addAndMakeVisible (k->slider);
         addAndMakeVisible (k->nameLabel);
         addAndMakeVisible (k->valueLabel);

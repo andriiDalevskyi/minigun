@@ -143,6 +143,28 @@ void MinigunAudioProcessorEditor::handleAddToLayer (juce::Array<juce::File> file
     refreshAll();
 }
 
+bool MinigunAudioProcessorEditor::keyPressed (const juce::KeyPress& key)
+{
+    const auto mods = key.getModifiers();
+    if (mods.isCommandDown() && ! mods.isAltDown())
+    {
+        // With Ctrl held, JUCE on Windows reports the control character (Ctrl+Z = 26, Ctrl+Y = 25);
+        // other platforms report the letter. Accept both.
+        const auto code = key.getKeyCode();
+        if (code == 'Z' || code == 'z' || code == 26)
+        {
+            if (mods.isShiftDown()) audioProcessor.redo(); else audioProcessor.undo();
+            return true;
+        }
+        if ((code == 'Y' || code == 'y' || code == 25) && ! mods.isShiftDown())
+        {
+            audioProcessor.redo();
+            return true;
+        }
+    }
+    return false;
+}
+
 void MinigunAudioProcessorEditor::refreshAll()
 {
     auto& kit = audioProcessor.getKit();
