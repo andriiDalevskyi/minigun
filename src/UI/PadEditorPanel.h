@@ -29,6 +29,7 @@ public:
     void refresh();
 
     void paint (juce::Graphics&) override;
+    void mouseDown (const juce::MouseEvent&) override; // click on the panel background drops focus from the text fields
     void resized() override;
 
 private:

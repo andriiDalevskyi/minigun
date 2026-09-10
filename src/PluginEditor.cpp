@@ -18,6 +18,12 @@ MinigunAudioProcessorEditor::MinigunAudioProcessorEditor (MinigunAudioProcessor&
 {
     setLookAndFeel (&lookAndFeel);
 
+    // The editor root accepts keyboard focus itself. Without this, JUCE hands focus to the first
+    // focusable child (the pad-name field) every time the plug-in window is activated, e.g. when
+    // the host focuses the FX window on mouse-over; clicking on empty space also lands here, which
+    // makes text fields commit on any click elsewhere.
+    setWantsKeyboardFocus (true);
+
     addAndMakeVisible (header);
     addAndMakeVisible (padGrid);
     addAndMakeVisible (padEditor);
@@ -94,22 +100,24 @@ void MinigunAudioProcessorEditor::handlePadDrop (int padIndex, juce::Array<juce:
     std::vector<minigun::SampleRef> refs;
     for (auto& f : files) refs.push_back ({ f, false });
 
-    if (pad.isEmpty())
+    // Dropped files join the pad's ACTIVE layer. New layers are only ever created by the user
+    // (+ LAYER); the single exception is a pad with no layers at all, which needs its first one.
+    const bool samePad = (padIndex == audioProcessor.getSelectedPad());
+
+    if (pad.layers.empty())
     {
-        pad.layers.clear();
-        pad.layers.push_back ({ 1, 127, refs });
+        pad.layers.push_back ({ 1, 127, {} });
     }
-    else
-    {
-        int newIdx = minigun::layers::addLayerOnTop (pad);
-        if (newIdx < 0) newIdx = (int) pad.layers.size() - 1; // already at 8 layers: overwrite top
-        pad.layers[(size_t) newIdx].samples = refs;
-    }
+
+    int target = samePad ? layerEditor.getSelectedLayer() : (int) pad.layers.size() - 1; // other pad: its top layer
+    target = juce::jlimit (0, (int) pad.layers.size() - 1, target);
+    for (auto& r : refs)
+        pad.layers[(size_t) target].samples.push_back (r);
 
     autoNamePad (pad, files.getFirst());
     audioProcessor.setSelectedPad (padIndex);
     audioProcessor.kitEdited();
-    layerEditor.notifyPadChanged();
+    if (! samePad) layerEditor.notifyPadChanged();
     refreshAll();
 }
 

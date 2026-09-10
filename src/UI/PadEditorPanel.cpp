@@ -55,8 +55,10 @@ PadEditorPanel::PadEditorPanel (MinigunAudioProcessor& processorIn) : processor 
     {
         writeAndNotify ([this] { processor.getKit().pads[(size_t) currentPadIndex].name = nameEditor.getText(); });
     };
+    nameEditor.onTextChange = commitName; // live: the name is saved as it is typed
     nameEditor.onFocusLost = commitName;
-    nameEditor.onReturnKey = [this, commitName] { commitName(); grabKeyboardFocus(); };
+    nameEditor.onReturnKey = [this, commitName] { commitName(); giveAwayKeyboardFocus(); };
+    nameEditor.onEscapeKey = [this] { giveAwayKeyboardFocus(); };
     addAndMakeVisible (nameEditor);
 
     rrButton.setClickingTogglesState (true);
@@ -101,7 +103,8 @@ PadEditorPanel::PadEditorPanel (MinigunAudioProcessor& processorIn) : processor 
         setNoteFromUI (note);
     };
     noteNumberEditor.onFocusLost = commitNoteNumber;
-    noteNumberEditor.onReturnKey = [this, commitNoteNumber] { commitNoteNumber(); grabKeyboardFocus(); };
+    noteNumberEditor.onReturnKey = [this, commitNoteNumber] { commitNoteNumber(); giveAwayKeyboardFocus(); };
+    noteNumberEditor.onEscapeKey = [this] { giveAwayKeyboardFocus(); };
     addAndMakeVisible (noteNumberEditor);
 
     // CHOKE: "-" (id 1, group 0) then 1..8 (id 2..9, group = id-1).
@@ -414,4 +417,14 @@ void PadEditorPanel::paint (juce::Graphics& g)
     drawLabelAbove (learnButton, "LEARN");
 }
 
+} // namespace minigun
+
+namespace minigun
+{
+void PadEditorPanel::mouseDown (const juce::MouseEvent&)
+{
+    // JUCE keeps focus inside a parent that already contains the focused child; hand it back to the
+    // editor root so the name / note fields commit and lose their frame on any click elsewhere.
+    giveAwayKeyboardFocus();
+}
 } // namespace minigun

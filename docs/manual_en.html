@@ -70,7 +70,7 @@
     <h3>Interactions</h3>
     <ul>
       <li><strong>Click</strong> a pad to select it and play it. The velocity follows the click height: top edge = 127, bottom edge = 1.</li>
-      <li><strong>Drop audio files</strong> from Explorer or from the Browser onto a pad. On an empty pad they become layer 1 (velocity 1–127). On a loaded pad they become a new top layer that takes the upper half of the previous top layer's range. Several files dropped together go into the same layer.</li>
+      <li><strong>Drop audio files</strong> from Explorer or from the Browser onto a pad. They join the pad's <strong>active layer</strong> (the layer selected in §6; for a pad that is not selected, its top layer). An empty pad gets its first layer (1–127) automatically. New layers are only created with <strong>+ LAYER</strong>.</li>
       <li>A pad is named automatically after its first sample when it has no name yet.</li>
     </ul>
   </div>
@@ -84,7 +84,7 @@
 <figure><img src="img/ui_pad_editor.png" alt="Pad editor"><figcaption>The editor always shows the selected pad (badge <em>1</em> = pad 1).</figcaption></figure>
 <table>
   <tr><th>Control</th><th>What it does</th></tr>
-  <tr><td>Badge + name</td><td>The pad number and an editable name. Click the name, type, press <kbd>Enter</kbd>. The name is shown on the pad.</td></tr>
+  <tr><td>Badge + name</td><td>The pad number and an editable name. Click the field and type: the name is saved as you type and shown on the pad; <kbd>Enter</kbd>, <kbd>Esc</kbd> or a click anywhere else leaves the field.</td></tr>
   <tr><td>RR / RND</td><td>How samples inside a layer alternate. <strong>RR</strong> (round-robin) plays them in order 1, 2, 3, 1…; <strong>RND</strong> picks one at random on every hit. Use several similar samples per layer for a natural, non-machine-gun feel.</td></tr>
   <tr><td>NOTE</td><td>The MIDI note that triggers the pad. Pick it from the drop-down (all 128 notes, <code>C1 · 36</code> style) or type the number into the field next to it and press <kbd>Enter</kbd>. The mouse wheel over the drop-down steps by one semitone. Several pads may share a note: they all play together.</td></tr>
   <tr><td>CHOKE</td><td>Choke group, <em>—</em> or 1…8. Pads in the same group cut each other off: when one is hit, the others in that group are released immediately. Classic use: closed and open hi-hat in group 1, so the closed hat stops the open one.</td></tr>
@@ -218,7 +218,7 @@
 <table>
   <tr><th>Where</th><th>Gesture</th><th>Result</th></tr>
   <tr><td>Pad</td><td>Click (top / bottom)</td><td>Play loud / soft, select the pad</td></tr>
-  <tr><td>Pad</td><td>Drop files</td><td>New layer with those files</td></tr>
+  <tr><td>Pad</td><td>Drop files</td><td>Add the files to the active layer</td></tr>
   <tr><td>Range bar</td><td>Click segment</td><td>Audition that layer (RR/RND applies)</td></tr>
   <tr><td>Range bar</td><td>Drag divider</td><td>Change velocity ranges</td></tr>
   <tr><td>Layer row</td><td>× / right-click, or − LAYER</td><td>Delete layer</td></tr>
