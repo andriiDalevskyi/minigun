@@ -1,17 +1,34 @@
 # Minigun
 
-Легковісний VST3 / Standalone драм-семплер на JUCE 8.
+Lightweight VST3 / Standalone drum sampler built with JUCE 8. Sixteen MPC-style pads, velocity layers with round-robin or random samples, choke groups, per-pad routing to 17 stereo outputs, and portable kits that carry their own samples.
 
-- 16 педів (4×4, порядок MPC: пед 1 знизу зліва)
-- На пед: MIDI-нота, до 8 велосіті-леєрів, кілька семплів на леєр (Round-robin або Random)
-- Параметри педа: Volume, Pan, Pitch ±12, Choke group, Attack / Decay / Release
-- Вбудований браузер файлів з прослуховуванням через вихід плагіна, drag&drop з Провідника
-- Формати: WAV, AIFF, FLAC, OGG, MP3 (+ WMA через Windows Media)
-- Портативні кіти: **Save kit** копіює всі семпли в `<Кіт>/samples/` і пише `kit.json` з відносними шляхами
+**English** · [Українська](#minigun-українською)
 
-## Збірка (Windows)
+![Minigun main window](docs/img/ui_full.png)
 
-Потрібні: Visual Studio 2022 Build Tools (C++), CMake ≥ 3.22, JUCE 8.0.4 у `external/JUCE`.
+## Features
+
+- **16 pads** in MPC order (pad 1 bottom-left). Click to play with velocity from the click height; drop audio files from Explorer or the built-in browser to assign them.
+- **Velocity layers**: up to 8 per pad, draggable range dividers, click a segment to audition that layer. Any number of samples per layer, alternated **round-robin** or **random**.
+- **Per-pad settings**: MIDI note (drop-down + number field, MIDI learn), choke group, volume, pan, pitch ±12 st, attack / decay / release.
+- **Outputs**: Main + 16 aux stereo buses (34 channels). Each pad picks its bus and can go **stereo** or **mono** to a single channel, with optional stereo-to-mono summing.
+- **Pads glow in the colour of the layer that played**, from MIDI and from mouse clicks alike.
+- **Built-in browser** with instant preview, drag & drop to pads or layers, editable path, drive list, Backspace / Alt+arrows / mouse Back-Forward navigation.
+- **Portable kits**: *Save kit* copies every sample into `<kit>/samples/` and writes `kit.json` with relative paths, so a kit folder can be moved between projects and machines. The full kit is also stored in the DAW project.
+- Formats: WAV, AIFF, FLAC, OGG, MP3, WMA.
+
+## Installation
+
+- **VST3**: copy the `Minigun.vst3` folder to `C:\Program Files\Common Files\VST3\` and rescan plug-ins in your DAW. The plug-in appears as *VST3i: Minigun (Dallas Audio)*.
+- **Standalone**: run `Minigun.exe` and pick an audio device and MIDI input under *Options*.
+
+## Building (Windows)
+
+Requirements: Visual Studio 2022 Build Tools (C++ workload), CMake ≥ 3.22, JUCE 8.0.4 in `external/JUCE` (not included in the repository):
+
+```bash
+git clone --depth 1 --branch 8.0.4 https://github.com/juce-framework/JUCE external/JUCE
+```
 
 ```bash
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64
@@ -21,72 +38,132 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release --target Minigun_VST3 Minigun_Standalone
 ```
 
-VST3 автоматично копіюється в `C:\Program Files\Common Files\VST3\Minigun.vst3`.
-Standalone: `build\Minigun_artefacts\Release\Standalone\Minigun.exe`.
+Outputs: `build\Minigun_artefacts\Release\VST3\Minigun.vst3` and `build\Minigun_artefacts\Release\Standalone\Minigun.exe`. Copying to the system VST3 folder needs an elevated shell.
 
-## Формат кіта
+## Routing pads to separate DAW tracks
+
+The plug-in exposes 17 stereo outputs. In the pad editor choose **OUT** (Main, Out 1-2 … Out 31-32) and **ST / L / R** (stereo pair, or mono to the odd / even channel; **SUM** folds a stereo sample to mono).
+
+REAPER example: increase the track channel count (e.g. 8 for Main + three aux pairs), set pads to *Out 1-2*, *Out 3-4*, *Out 5-6*, then add receives from channels 3/4, 5/6, 7/8 on separate tracks, or use *Build multichannel routing for this plug-in*. The plug-in footer shows how many buses the host has enabled (`outs N/17`). A pad routed to a bus the host has not enabled falls back to Main.
+
+## Kit format
 
 ```
-<Kit folder>/
+My Kit\
   kit.json
-  samples/
+  samples\
     kick_01.wav
     ...
 ```
 
-`kit.json`:
+`kit.json` (excerpt):
 
 ```json
 { "format": "minigun-kit", "version": 1, "name": "808 Basic",
   "pads": [ { "index": 0, "name": "Kick", "note": 36, "mode": "rr", "choke": 0,
               "volumeDb": 0.0, "pan": 0.0, "pitch": 0.0,
               "attackMs": 0.0, "decayMs": -1, "releaseMs": 120,
+              "output": 0, "outMode": "stereo", "monoSum": true,
+              "layers": [ { "lo": 1, "hi": 127, "samples": ["samples/kick_01.wav"] } ] } ] }
+```
+
+Default kits folder: `Documents\Minigun Kits`.
+
+## Documentation
+
+- [User manual (English, PDF)](docs/Minigun_User_Manual_EN.pdf)
+- [Інструкція користувача (українська, PDF)](docs/Minigun_Instrukciya_UA.pdf)
+- Sources: `docs/manual_en.html`, `docs/manual_uk.html`, `docs/manual.css`, screenshots in `docs/img/`. Rebuild the PDFs with `docs/build-pdf.ps1` (headless Edge).
+- [ARCHITECTURE.md](ARCHITECTURE.md) — technical specification.
+
+## Project structure
+
+- `src/Model` — data model (`KitModel.h`) and kit save/load (`KitStore`)
+- `src/Engine` — sample loading, voices, real-time sampler engine
+- `src/UI` — interface components following the design in `design/`
+- `design/` — design canvas (`Main.dc.html`, `PadStates.dc.html`)
+- `docs/` — manuals
+
+---
+
+# Minigun (українською)
+
+Легкий драм-семплер VST3 / Standalone на JUCE 8. Шістнадцять педів у стилі MPC, велосіті-леєри з round-robin або випадковими семплами, choke-групи, маршрутизація кожного педа на 17 стерео-виходів і портативні кіти, що носять свої семпли з собою.
+
+## Можливості
+
+- **16 педів** у порядку MPC (пед 1 знизу зліва). Клік грає з velocity за висотою кліку; аудіофайли з Провідника або вбудованого браузера призначаються перетягуванням.
+- **Велосіті-леєри**: до 8 на пед, розділювачі діапазонів тягнуться мишею, клік по сегменту прослуховує леєр. У леєрі будь-яка кількість семплів, що чергуються **round-robin** або **випадково**.
+- **Налаштування педа**: MIDI-нота (дропдаун + числове поле, MIDI learn), choke-група, гучність, панорама, висота ±12 півтонів, attack / decay / release.
+- **Виходи**: Main + 16 додаткових стерео-шин (34 канали). Кожен пед обирає шину і може йти **стерео** або **моно** на один канал, з опційним сумуванням стерео-семпла в моно.
+- **Педи світяться кольором леєра, який зіграв**, і від MIDI, і від кліку мишею.
+- **Вбудований браузер** із миттєвим прослуховуванням, перетягуванням на педи чи леєри, редагованим шляхом, списком дисків, навігацією Backspace / Alt+стрілки / бічні кнопки миші.
+- **Портативні кіти**: *Save kit* копіює всі семпли в `<кіт>/samples/` і пише `kit.json` з відносними шляхами, тож теку кіта можна переносити між проєктами й комп'ютерами. Повний кіт також зберігається в проєкті DAW.
+- Формати: WAV, AIFF, FLAC, OGG, MP3, WMA.
+
+## Установка
+
+- **VST3**: скопіюйте теку `Minigun.vst3` у `C:\Program Files\Common Files\VST3\` і пересканируйте плагіни в DAW. Плагін з'явиться як *VST3i: Minigun (Dallas Audio)*.
+- **Standalone**: запустіть `Minigun.exe` і в *Options* оберіть аудіопристрій та MIDI-вхід.
+
+## Збірка (Windows)
+
+Потрібні: Visual Studio 2022 Build Tools (C++), CMake ≥ 3.22, JUCE 8.0.4 у `external/JUCE` (у репозиторій не входить):
+
+```bash
+git clone --depth 1 --branch 8.0.4 https://github.com/juce-framework/JUCE external/JUCE
+```
+
+```bash
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+```
+
+```bash
+cmake --build build --config Release --target Minigun_VST3 Minigun_Standalone
+```
+
+Результат: `build\Minigun_artefacts\Release\VST3\Minigun.vst3` і `build\Minigun_artefacts\Release\Standalone\Minigun.exe`. Копіювання в системну теку VST3 потребує прав адміністратора.
+
+## Маршрутизація педів на окремі треки DAW
+
+Плагін має 17 стерео-виходів. У редакторі педа оберіть **OUT** (Main, Out 1-2 … Out 31-32) і **ST / L / R** (стерео-пара або моно на непарний / парний канал; **SUM** згортає стерео-семпл у моно).
+
+Приклад для REAPER: збільшіть кількість каналів треку (напр. 8 для Main + три пари), поставте педи на *Out 1-2*, *Out 3-4*, *Out 5-6*, потім додайте receive з каналів 3/4, 5/6, 7/8 на окремі треки або скористайтесь *Build multichannel routing for this plug-in*. Футер плагіна показує, скільки шин увімкнув хост (`outs N/17`). Пед, направлений на невключену шину, автоматично грає в Main.
+
+## Формат кіта
+
+```
+Мій кіт\
+  kit.json
+  samples\
+    kick_01.wav
+    ...
+```
+
+`kit.json` (фрагмент):
+
+```json
+{ "format": "minigun-kit", "version": 1, "name": "808 Basic",
+  "pads": [ { "index": 0, "name": "Kick", "note": 36, "mode": "rr", "choke": 0,
+              "volumeDb": 0.0, "pan": 0.0, "pitch": 0.0,
+              "attackMs": 0.0, "decayMs": -1, "releaseMs": 120,
+              "output": 0, "outMode": "stereo", "monoSum": true,
               "layers": [ { "lo": 1, "hi": 127, "samples": ["samples/kick_01.wav"] } ] } ] }
 ```
 
 Стандартна тека кітів: `Документи\Minigun Kits`.
 
-## Маршрутизація
-
-Плагін має 17 стерео виходів: **Main** (завжди увімкнений) і 16 додаткових ("Out 1"…"Out 16", вимкнені за замовчуванням). У панелі редагування педа з'явився степер **OUT** (між CHOKE і LEARN) — вибирає, на який вихід піде цей пед: "MAIN" або "OUT n". Якщо обраний аукс-вихід не увімкнено в поточній розкладці хоста, голос автоматично програється в Main. Прев'ю семплів із браузера завжди йде в Main.
-
-Щоб отримати окремі виходи в **REAPER**:
-1. У вікні FX плагіна натиснути кнопку **"2 out"** (ліворуч зверху) — відкриється список виходів.
-2. Увімкнути потрібні пари "Out 1"…"Out 16" (поставити галочки навпроти потрібних стерео-виходів).
-3. Або скористатися пунктом **"Build multichannel routing for this plug-in"** — REAPER сам створить потрібні канали на треку відповідно до кількості увімкнених виходів.
-4. Після цього кожен вихід плагіна можна замаршрутизувати на окремий трек REAPER через звичайну матрицю роутингу треку.
-
-У Standalone-версії доступний лише Main — там немає хостового UI для мультивиходів.
-
-## Структура
-
-- `src/Model` — модель даних (`KitModel.h`) і збереження/завантаження кіта (`KitStore`)
-- `src/Engine` — завантаження семплів, голоси, рушій семплера (real-time safe)
-- `src/UI` — компоненти інтерфейсу за дизайном у `design/`
-- `design/` — дизайн-макети (`Main.dc.html`, `PadStates.dc.html`)
-- `ARCHITECTURE.md` — технічна специфікація
-
-## Панель педа (v0.3)
-
-- **NOTE** — дропдаун із 128 нот («C1 · 36») плюс поле з номером ноти; змінювати можна будь-яке з них, колесо миші над дропдауном крутить на ±1.
-- **CHOKE** — дропдаун («—», 1…8). Педи однієї choke-групи глушать один одного: новий удар обриває голоси інших педів групи (закритий хет глушить відкритий).
-- **OUT** — дропдаун виходу: «Main», «Out 1-2» … «Out 31-32». Перемикач **ST | L | R** обирає стерео-пару або один моно-канал пари (L = непарний канал, R = парний); у моно-режимі підписи стають «Main L», «Out 3» тощо.
-- **SUM** — лише для моно: увімкнено — стерео-семпл сумується в моно ((L+R)/2); вимкнено — береться тільки канал відповідної сторони. Моно-семпли грають як є.
-
-## Навігація у браузері
-
-- Клік по папці виділяє її рамкою, подвійний клік або **Enter** відкриває.
-- **Backspace** — на рівень вгору (з кореня диска — до списку дисків «Computer»).
-- **Бічні кнопки миші** (Back/Forward) та **Alt+←/→** — назад/вперед по історії відвіданих папок.
-- Рядок шляху редагується: ввести шлях до теки або файлу і натиснути Enter.
-
-## Підсвітка педів і прослуховування леєрів
-
-- Пед світиться кольором велосіті-леєра, який щойно зіграв (темніший амбер — нижні леєри, яскравий — верхні), і від MIDI, і від кліку.
-- Клік по сегменту смуги леєрів грає семпл цього леєра з вибраного педа за його правилом RR/RND; velocity береться з позиції кліку на шкалі 1…127.
-
 ## Документація
 
-- `docs/Minigun_Instrukciya_UA.pdf` — інструкція користувача (українська)
-- `docs/Minigun_User_Manual_EN.pdf` — user manual (English)
-- Джерела: `docs/manual_uk.html`, `docs/manual_en.html`, `docs/manual.css`, скріншоти в `docs/img/`. Перегенерувати PDF: відкрити HTML у Edge headless з `--print-to-pdf` (див. `docs/build-pdf.ps1`).
+- [Інструкція користувача (українська, PDF)](docs/Minigun_Instrukciya_UA.pdf)
+- [User manual (English, PDF)](docs/Minigun_User_Manual_EN.pdf)
+- Джерела: `docs/manual_uk.html`, `docs/manual_en.html`, `docs/manual.css`, скріншоти в `docs/img/`. Перегенерувати PDF: `docs/build-pdf.ps1` (Edge у headless-режимі).
+- [ARCHITECTURE.md](ARCHITECTURE.md) — технічна специфікація.
+
+## Структура проєкту
+
+- `src/Model` — модель даних (`KitModel.h`) і збереження/завантаження кіта (`KitStore`)
+- `src/Engine` — завантаження семплів, голоси, real-time рушій семплера
+- `src/UI` — компоненти інтерфейсу за дизайном у `design/`
+- `design/` — дизайн-полотно (`Main.dc.html`, `PadStates.dc.html`)
+- `docs/` — інструкції
