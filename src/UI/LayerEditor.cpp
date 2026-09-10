@@ -35,8 +35,16 @@ class SampleChip : public juce::Component
 public:
     explicit SampleChip (juce::File f) : file (std::move (f)) {}
 
+    int padIndex = 0, layerIndex = 0, sampleIndex = 0; // identity carried by a chip drag
+
     std::function<void()> onPreviewClick;
     std::function<void()> onRemoveClick;
+
+    /** Dims the chip while it is the source of a drag. */
+    void setBeingDragged (bool shouldBeDragged)
+    {
+        if (beingDragged != shouldBeDragged) { beingDragged = shouldBeDragged; repaint(); }
+    }
 
     int preferredWidth() const
     {
@@ -46,26 +54,60 @@ public:
 
     void paint (juce::Graphics& g) override
     {
+        const float a = beingDragged ? 0.3f : 1.0f; // the chip stays in place, dimmed, while it is dragged
+
         auto b = getLocalBounds().toFloat();
-        g.setColour (MinigunLookAndFeel::segBg);
+        g.setColour (MinigunLookAndFeel::segBg.withMultipliedAlpha (a));
         g.fillRoundedRectangle (b, 4.0f);
-        g.setColour (juce::Colour (0xff33373e));
+        g.setColour (juce::Colour (0xff33373e).withMultipliedAlpha (a));
         g.drawRoundedRectangle (b.reduced (0.5f), 4.0f, 1.0f);
 
         auto textArea = getLocalBounds().reduced (8, 0);
         textArea.removeFromRight (16);
-        g.setColour (MinigunLookAndFeel::text);
+        g.setColour (MinigunLookAndFeel::text.withMultipliedAlpha (a));
         g.setFont (MinigunLookAndFeel::monoFont (11.0f));
         g.drawText (file.getFileName(), textArea, juce::Justification::centredLeft, true);
 
         auto xArea = getLocalBounds().removeFromRight (18).toFloat().reduced (6.0f);
-        g.setColour (MinigunLookAndFeel::label);
+        g.setColour (MinigunLookAndFeel::label.withMultipliedAlpha (a));
         g.drawLine (xArea.getX(), xArea.getY(), xArea.getRight(), xArea.getBottom(), 1.6f);
         g.drawLine (xArea.getRight(), xArea.getY(), xArea.getX(), xArea.getBottom(), 1.6f);
     }
 
+    void mouseDown (const juce::MouseEvent&) override
+    {
+        dragStarted = false;
+    }
+
+    void mouseDrag (const juce::MouseEvent& e) override
+    {
+        // Same guard as the pad grid: the mouse has to really travel, so a click on the chip
+        // (preview / remove) never turns into a drag by accident.
+        if (dragStarted || e.getDistanceFromDragStart() < 8) return;
+
+        auto* container = juce::DragAndDropContainer::findParentDragContainerFor (this);
+        if (container == nullptr) return;
+
+        auto snapshot = createComponentSnapshot (getLocalBounds(), true); // taken before dimming
+        juce::Image faded (juce::Image::ARGB, snapshot.getWidth(), snapshot.getHeight(), true);
+        {
+            juce::Graphics ig (faded);
+            ig.setOpacity (0.8f);
+            ig.drawImageAt (snapshot, 0, 0);
+        }
+
+        dragStarted = true;
+        setBeingDragged (true);
+
+        auto offset = -e.getPosition();
+        container->startDragging (LayerEditor::makeSampleDragDescription (padIndex, layerIndex, sampleIndex),
+                                  this, juce::ScaledImage (faded), false, &offset, &e.source);
+    }
+
     void mouseUp (const juce::MouseEvent& e) override
     {
+        if (dragStarted) { dragStarted = false; return; } // the drag consumed this gesture
+
         auto xHit = getLocalBounds().removeFromRight (18);
         if (xHit.contains (e.getPosition())) { if (onRemoveClick) onRemoveClick(); }
         else                                  { if (onPreviewClick) onPreviewClick(); }
@@ -73,6 +115,8 @@ public:
 
 private:
     juce::File file;
+    bool dragStarted = false;
+    bool beingDragged = false;
 };
 
 //==============================================================================
@@ -106,6 +150,7 @@ class LayerRow : public juce::Component
 {
 public:
     int layerIndex = 0;
+    int padIndex = 0;
     juce::Colour badgeTop, badgeBottom;
     bool selected = false;
 
@@ -122,6 +167,9 @@ public:
         {
             auto chip = std::make_unique<SampleChip> (samples[i].file);
             auto idx = (int) i;
+            chip->padIndex = padIndex;
+            chip->layerIndex = layerIndex;
+            chip->sampleIndex = idx;
             chip->onPreviewClick = [this, file = samples[i].file] { if (onPreviewFile) onPreviewFile (file); };
             chip->onRemoveClick = [this, idx] { if (removeSampleAt) removeSampleAt (idx); };
             addAndMakeVisible (*chip);
@@ -134,6 +182,46 @@ public:
     int computeHeightForWidth (int width) const
     {
         return layoutChips (width, false);
+    }
+
+    /** Insertion slot for a chip dropped at this row-local position: the number of chips that
+        come before the point in reading order (0 = before the first chip, size = after the last). */
+    int insertIndexForLocalPos (juce::Point<int> p) const
+    {
+        int index = 0;
+        for (auto& c : chips)
+        {
+            auto b = c->getBounds();
+            const bool pointIsPastChip = p.y >= b.getBottom()
+                                      || (p.y >= b.getY() && p.x >= b.getCentreX());
+            if (! pointIsPastChip) break;
+            ++index;
+        }
+        return index;
+    }
+
+    /** Row-local bounds of the insertion caret drawn for `index`. */
+    juce::Rectangle<int> caretBoundsForIndex (int index) const
+    {
+        const int rowH = 26;
+        if (chips.empty())
+            return { addChip.getX() - 4, addChip.getY(), 3, rowH };
+
+        if (index >= (int) chips.size())
+        {
+            auto b = chips.back()->getBounds();
+            return { b.getRight() + 2, b.getY(), 3, rowH };
+        }
+
+        auto b = chips[(size_t) juce::jmax (0, index)]->getBounds();
+        return { b.getX() - 4, b.getY(), 3, rowH };
+    }
+
+    /** Dims the chip that is being dragged out of this row; -1 undims every chip. */
+    void setDraggedChip (int sampleIndex)
+    {
+        for (size_t i = 0; i < chips.size(); ++i)
+            chips[i]->setBeingDragged ((int) i == sampleIndex);
     }
 
     void resized() override
@@ -250,7 +338,7 @@ class LayerEditor::RowsContainer : public juce::Component
 public:
     std::vector<std::unique_ptr<LayerRow>> rows;
 
-    void rebuild (Pad& pad, int selectedLayer, int width,
+    void rebuild (Pad& pad, int padIndex, int selectedLayer, int width,
                   std::function<void (int)> onSelect,
                   std::function<void (int)> onDelete,
                   std::function<void (int, int)> onRemoveSample,
@@ -264,6 +352,7 @@ public:
         {
             auto row = std::make_unique<LayerRow>();
             row->layerIndex = i;
+            row->padIndex = padIndex;
             layerRampColours (i, n, row->badgeTop, row->badgeBottom);
             row->selected = (i == selectedLayer);
             row->onSelect = [onSelect, i] { onSelect (i); };
@@ -357,7 +446,7 @@ void LayerEditor::refresh()
     int width = rowsViewport.getWidth() > 0 ? rowsViewport.getMaximumVisibleWidth() : getWidth() - 8;
     width = juce::jmax (width, 100);
 
-    rowsContainer->rebuild (pad, selectedLayer, width,
+    rowsContainer->rebuild (pad, processor.getSelectedPad(), selectedLayer, width,
         [this] (int i) { selectLayer (i); },
         [this] (int i) { deleteLayer (i); },
         [this] (int layerIdx, int sampleIdx)
@@ -465,30 +554,41 @@ void LayerEditor::paint (juce::Graphics& g)
     g.drawText ("127", scaleRow, juce::Justification::centredRight);
     g.setFont (MinigunLookAndFeel::labelFont (10.0f));
     g.drawText ("DRAG DIVIDERS TO SET VELOCITY RANGES", scaleRow, juce::Justification::centred);
+}
 
-    // Drag & drop highlight.
-    if (dragActive)
+void LayerEditor::paintOverChildren (juce::Graphics& g)
+{
+    if (! dragActive) return;
+
+    if (dragHighlightSpecific && ! dragHighlightBounds.isEmpty())
     {
-        if (dragHighlightSpecific && ! dragHighlightBounds.isEmpty())
-        {
-            g.saveState();
-            if (dragHighlightInRows)
-                g.reduceClipRegion (rowsViewport.getBounds());
+        g.saveState();
+        if (dragHighlightInRows)
+            g.reduceClipRegion (rowsViewport.getBounds());
 
-            juce::Path dashed;
-            dashed.addRoundedRectangle (dragHighlightBounds.toFloat().reduced (1.0f), 6.0f);
-            float dashLengths[] = { 4.0f, 3.0f };
-            juce::Path stroked;
-            juce::PathStrokeType (2.0f).createDashedStroke (stroked, dashed, dashLengths, 2);
-            g.setColour (MinigunLookAndFeel::teal);
-            g.fillPath (stroked);
-            g.restoreState();
-        }
-        else
-        {
-            g.setColour (MinigunLookAndFeel::teal.withAlpha (0.4f));
-            g.drawRoundedRectangle (getLocalBounds().toFloat().reduced (0.5f), 8.0f, 1.0f);
-        }
+        juce::Path dashed;
+        dashed.addRoundedRectangle (dragHighlightBounds.toFloat().reduced (1.0f), 6.0f);
+        float dashLengths[] = { 4.0f, 3.0f };
+        juce::Path stroked;
+        juce::PathStrokeType (2.0f).createDashedStroke (stroked, dashed, dashLengths, 2);
+        g.setColour (MinigunLookAndFeel::teal);
+        g.fillPath (stroked);
+        g.restoreState();
+    }
+    else
+    {
+        g.setColour (MinigunLookAndFeel::teal.withAlpha (0.4f));
+        g.drawRoundedRectangle (getLocalBounds().toFloat().reduced (0.5f), 8.0f, 1.0f);
+    }
+
+    // Chip drag: a caret showing exactly which slot the sample will land in.
+    if (dragIsSample && dragInsertIndex >= 0 && ! dragCaretBounds.isEmpty())
+    {
+        g.saveState();
+        g.reduceClipRegion (rowsViewport.getBounds());
+        g.setColour (MinigunLookAndFeel::teal);
+        g.fillRoundedRectangle (dragCaretBounds.toFloat(), 1.5f);
+        g.restoreState();
     }
 }
 
@@ -595,14 +695,16 @@ juce::Rectangle<int> LayerEditor::segmentBoundsForLayer (int index, int total) c
 //==============================================================================
 // Drag & drop.
 
-void LayerEditor::updateDragTarget (juce::Point<int> localPos)
+void LayerEditor::updateDragTarget (juce::Point<int> localPos, bool sampleDrag)
 {
     dragActive = true;
 
     bool specific = false;
     bool inRows = false;
     int target = -1;
+    int insertIndex = -1;
     juce::Rectangle<int> highlight;
+    juce::Rectangle<int> caret;
 
     // 1) Over a layer row (rows live inside rowsViewport / rowsContainer).
     if (rowsViewport.getBounds().contains (localPos))
@@ -616,6 +718,14 @@ void LayerEditor::updateDragTarget (juce::Point<int> localPos)
                 specific = true;
                 inRows = true;
                 highlight = getLocalArea (rowsContainer.get(), row->getBounds());
+
+                // A chip drag also picks the slot it would land in, so a sample can be reordered
+                // inside one layer, not just moved between layers.
+                if (sampleDrag)
+                {
+                    insertIndex = row->insertIndexForLocalPos (row->getLocalPoint (this, localPos));
+                    caret = getLocalArea (row.get(), row->caretBoundsForIndex (insertIndex));
+                }
                 break;
             }
         }
@@ -648,12 +758,17 @@ void LayerEditor::updateDragTarget (juce::Point<int> localPos)
     }
 
     bool changed = (dragTargetLayer != target) || (dragHighlightSpecific != specific)
-                 || (dragHighlightInRows != inRows) || (dragHighlightBounds != highlight);
+                 || (dragHighlightInRows != inRows) || (dragHighlightBounds != highlight)
+                 || (dragIsSample != sampleDrag) || (dragInsertIndex != insertIndex)
+                 || (dragCaretBounds != caret);
 
     dragTargetLayer = target;
     dragHighlightSpecific = specific;
     dragHighlightInRows = inRows;
     dragHighlightBounds = highlight;
+    dragIsSample = sampleDrag;
+    dragInsertIndex = insertIndex;
+    dragCaretBounds = caret;
 
     if (changed) repaint();
 }
@@ -667,13 +782,16 @@ void LayerEditor::clearDragTarget()
         dragHighlightSpecific = false;
         dragHighlightInRows = false;
         dragHighlightBounds = {};
+        dragIsSample = false;
+        dragInsertIndex = -1;
+        dragCaretBounds = {};
         repaint();
     }
 }
 
 void LayerEditor::handleDroppedFiles (const juce::Array<juce::File>& files, juce::Point<int> localPos)
 {
-    updateDragTarget (localPos);
+    updateDragTarget (localPos, false);
     int target = dragTargetLayer;
     clearDragTarget();
 
@@ -690,12 +808,12 @@ bool LayerEditor::isInterestedInFileDrag (const juce::StringArray& files)
 
 void LayerEditor::fileDragEnter (const juce::StringArray&, int x, int y)
 {
-    updateDragTarget ({ x, y });
+    updateDragTarget ({ x, y }, false);
 }
 
 void LayerEditor::fileDragMove (const juce::StringArray&, int x, int y)
 {
-    updateDragTarget ({ x, y });
+    updateDragTarget ({ x, y }, false);
 }
 
 void LayerEditor::fileDragExit (const juce::StringArray&)
@@ -713,17 +831,27 @@ void LayerEditor::filesDropped (const juce::StringArray& files, int x, int y)
 
 bool LayerEditor::isInterestedInDragSource (const SourceDetails& details)
 {
+    int padIdx = 0, layerIdx = 0, sampleIdx = 0;
+    if (sampleDragFromDescription (details.description, padIdx, layerIdx, sampleIdx))
+        return padIdx == processor.getSelectedPad(); // the panel only ever shows one pad's layers
+
     return PadComponent::filesFromDragDescription (details.description).size() > 0;
+}
+
+static bool isSampleDrag (const juce::var& description)
+{
+    int a = 0, b = 0, c = 0;
+    return LayerEditor::sampleDragFromDescription (description, a, b, c);
 }
 
 void LayerEditor::itemDragEnter (const SourceDetails& details)
 {
-    updateDragTarget (details.localPosition);
+    updateDragTarget (details.localPosition, isSampleDrag (details.description));
 }
 
 void LayerEditor::itemDragMove (const SourceDetails& details)
 {
-    updateDragTarget (details.localPosition);
+    updateDragTarget (details.localPosition, isSampleDrag (details.description));
 }
 
 void LayerEditor::itemDragExit (const SourceDetails&)
@@ -733,8 +861,99 @@ void LayerEditor::itemDragExit (const SourceDetails&)
 
 void LayerEditor::itemDropped (const SourceDetails& details)
 {
+    int padIdx = 0, srcLayer = 0, srcIndex = 0;
+    if (sampleDragFromDescription (details.description, padIdx, srcLayer, srcIndex))
+    {
+        updateDragTarget (details.localPosition, true);
+        const int dstLayer = dragTargetLayer;
+        const int dstIndex = dragInsertIndex;
+        clearDragTarget();
+
+        if (padIdx == processor.getSelectedPad())
+            moveSample (srcLayer, srcIndex, dstLayer, dstIndex,
+                        juce::ModifierKeys::currentModifiers.isCtrlDown()); // Ctrl held = copy
+        else
+            clearSampleDragState();
+        return;
+    }
+
     auto files = PadComponent::filesFromDragDescription (details.description);
     handleDroppedFiles (files, details.localPosition);
+}
+
+//==============================================================================
+juce::var LayerEditor::makeSampleDragDescription (int padIndex, int layerIndex, int sampleIndex)
+{
+    auto* obj = new juce::DynamicObject();
+    obj->setProperty ("minigunSamplePad", padIndex);
+    obj->setProperty ("minigunSampleLayer", layerIndex);
+    obj->setProperty ("minigunSampleIndex", sampleIndex);
+    return juce::var (obj);
+}
+
+bool LayerEditor::sampleDragFromDescription (const juce::var& description,
+                                             int& padIndex, int& layerIndex, int& sampleIndex)
+{
+    auto* obj = description.getDynamicObject();
+    if (obj == nullptr || ! obj->hasProperty ("minigunSamplePad")) return false;
+
+    padIndex = (int) obj->getProperty ("minigunSamplePad");
+    layerIndex = (int) obj->getProperty ("minigunSampleLayer");
+    sampleIndex = (int) obj->getProperty ("minigunSampleIndex");
+    return true;
+}
+
+void LayerEditor::clearSampleDragState()
+{
+    clearDragTarget();
+    for (auto& row : rowsContainer->rows)
+        row->setDraggedChip (-1);
+}
+
+void LayerEditor::moveSample (int srcLayer, int srcIndex, int dstLayer, int dstIndex, bool copy)
+{
+    auto& pad = currentPad();
+    const int numLayers = (int) pad.layers.size();
+    if (srcLayer < 0 || srcLayer >= numLayers || dstLayer < 0 || dstLayer >= numLayers)
+    {
+        clearSampleDragState();
+        return;
+    }
+
+    auto& src = pad.layers[(size_t) srcLayer].samples;
+    if (srcIndex < 0 || srcIndex >= (int) src.size())
+    {
+        clearSampleDragState();
+        return;
+    }
+
+    int insertAt = dstIndex >= 0 ? dstIndex : (int) pad.layers[(size_t) dstLayer].samples.size();
+
+    // Dropping a chip back onto the slot it already occupies changes nothing: don't spend an
+    // undo step (or a kit reload) on it.
+    if (! copy && dstLayer == srcLayer && (insertAt == srcIndex || insertAt == srcIndex + 1))
+    {
+        selectLayer (dstLayer);
+        return;
+    }
+
+    const auto ref = src[(size_t) srcIndex];
+
+    writeAndNotify ([&]
+    {
+        if (! copy)
+        {
+            src.erase (src.begin() + srcIndex);
+            if (dstLayer == srcLayer && insertAt > srcIndex) --insertAt;
+        }
+
+        auto& dst = pad.layers[(size_t) dstLayer].samples;
+        insertAt = juce::jlimit (0, (int) dst.size(), insertAt);
+        dst.insert (dst.begin() + insertAt, ref);
+    });
+
+    selectedLayer = dstLayer;
+    refresh(); // rebuilds the rows, so the dimmed source chip goes with them
 }
 
 } // namespace minigun

@@ -236,6 +236,7 @@ void MinigunAudioProcessorEditor::mouseDown (const juce::MouseEvent& e)
 void MinigunAudioProcessorEditor::dragOperationEnded (const juce::DragAndDropTarget::SourceDetails&)
 {
     padGrid.clearPadDragState();
+    layerEditor.clearSampleDragState();
 }
 
 bool MinigunAudioProcessorEditor::keyPressed (const juce::KeyPress& key)

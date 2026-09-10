@@ -83,7 +83,7 @@ Layout (1200x720, fixed, no resize): header 56 px; body padding 20/24; pad area 
 Interactions:
 - Pad click → `triggerPad`, and selects the pad. Drag files from Explorer onto a pad → all dropped files become ONE new layer on that pad (if the pad is empty, that layer spans 1..127; else append a top layer splitting the previous top range in half). Pad also accepts drags from the BrowserPanel (same behaviour).
 - PadEditorPanel: name (editable TextEditor styled as LCD), note LCD with ‹ › buttons (also mouse wheel), RR/RND segmented toggle, choke LCD with ‹ › (—,1..8), MIDI learn button (lit while armed), 6 rotary knobs Vol/Pan/Pitch/Atk/Dec/Rel with value labels ("Full" for decay -1, "C" for pan 0).
-- LayerEditor: range bar 34 px; dividers (teal 3 px) draggable, min layer width 1; "+ Layer" splits the top layer; rows per layer (top layer first) with sample chips (`filename ×`), "+ add" chip opens a FileChooser (multi-select), right-click on a layer row → "Delete layer" (merges its range into the neighbour). Clicking a chip previews that sample.
+- LayerEditor: range bar 34 px; dividers (teal 3 px) draggable, min layer width 1; "+ Layer" splits the top layer; rows per layer (top layer first) with sample chips (`filename ×`), "+ add" chip opens a FileChooser (multi-select), right-click on a layer row → "Delete layer" (merges its range into the neighbour). Clicking a chip previews that sample. Chips can be dragged to reorder them inside a layer or to move them to another layer (Ctrl on drop = copy).
 - BrowserPanel: root chooser (‹ up, path LCD), `juce::FileListComponent` or a custom list styled like the mockup; single click on an audio file → preview when Preview toggle is on; double-click → add to the selected pad's selected layer (the "Add to Lx" button does the same; Lx = layer selected in LayerEditor, default top). Waveform thumbnail (`juce::AudioThumbnail`) + "44.1k · 24b · 0.82 s" info line. Remembers last directory in `juce::PropertiesFile` (app name "Minigun").
 - HeaderBar: MINIGUN wordmark, kit LCD (name · N pads · N smp), Save kit / Load kit buttons, MIDI LED (lit 100 ms after any note), 8-segment stereo peak meter, master knob bound to apvts `master`.
 - Timer 30 Hz in PluginEditor: pad hit glow (decay ~150 ms), meter, MIDI LED.
@@ -132,3 +132,37 @@ Moving a pad that was built in the wrong slot, without rebuilding it.
 - The source pad is dimmed while it is being dragged (`setDragSourceHighlight`). JUCE tells the *container*, not the source component, when a drag ends, so `MinigunAudioProcessorEditor::dragOperationEnded` calls `PadGrid::clearPadDragState()`.
 - Drop → `PadComponent::onPadDroppedOnPad` → `PadGrid::onPadMoveRequested` → `MinigunAudioProcessorEditor::handlePadMoveRequest`: an async `juce::AlertWindow` ("Move" / "Cancel", parented to the editor so no extra OS window) naming both pads and warning that the destination is overwritten. Button index 1 = "Move" confirms.
 - `movePad (from, to)`: copies the whole `Pad` struct to the destination and resets the source to a default `Pad`. **The `note` number stays with the SLOT** (the destination keeps its own note, the emptied source keeps its own) — the note is what the host plays, so it must not travel with the samples. Everything else (name, layers, mode, choke, volume/pan/pitch, envelope, output routing) moves. Then: select the destination, `kitEdited()` (one undo step — Ctrl+Z restores both pads), `layerEditor.notifyPadChanged()`, `refreshAll()`.
+
+## v0.3.8 (2026-09-11, user feedback): drag & drop samples inside the layer editor
+
+Rearranging a pad's samples without deleting and re-adding them: a chip can be moved to another
+slot in its own layer (reorder) or onto another layer.
+
+- `SampleChip` is now a drag SOURCE: `mouseDrag` after 8 px of travel calls
+  `DragAndDropContainer::startDragging` with a semi-transparent snapshot of the chip as the drag
+  image. The snapshot is taken *before* the chip dims itself, otherwise the dragged image would be
+  dim too. `mouseDown` resets a `dragStarted` flag and `mouseUp` returns early when it is set, so a
+  drag never also fires the chip's preview / remove click.
+- Drag description: `LayerEditor::makeSampleDragDescription (pad, layer, index)` → a DynamicObject
+  with `"minigunSamplePad"` / `"minigunSampleLayer"` / `"minigunSampleIndex"`. A third shape next to
+  the file drag (array of paths) and the pad drag (`"minigunPad"`), so pads ignore chip drags and
+  `LayerEditor` tells all three apart. `LayerEditor::isInterestedInDragSource` additionally requires
+  the pad index to match the pad currently on screen.
+- Target: the existing `LayerEditor` drop-target resolution is reused (row → that layer, range-bar
+  segment → that layer, elsewhere → the selected layer). For a chip drag it also resolves an
+  **insertion slot**: `LayerRow::insertIndexForLocalPos` counts the chips that precede the mouse in
+  reading order (a chip counts as preceding when the pointer is below it, or on its line and past
+  its centre). A drop on a range-bar segment or on empty panel space appends instead (`-1`).
+- Feedback: the target row keeps the dashed teal outline, plus a 3 px teal caret at the insertion
+  slot (`LayerRow::caretBoundsForIndex`), and the source chip stays in place dimmed to 30 %.
+- Painting moved from `paint()` to **`paintOverChildren()`**: the rows are child components, so
+  anything drawn in `paint()` ends up underneath them. This also makes the pre-existing file-drop
+  row highlight visible, which it was not before.
+- Drop → `LayerEditor::moveSample (srcLayer, srcIndex, dstLayer, dstIndex, copy)`: copy the
+  `SampleRef`, erase it from the source (unless copying), decrement the insertion index when the
+  move is within one layer and goes forwards, then insert. Holding **Ctrl** on drop copies instead
+  of moving. A drop onto the slot the chip already occupies returns early, so it costs no undo step
+  and no kit reload. Otherwise one `kitEdited()` = one undo step, and the target layer becomes the
+  selected layer.
+- `MinigunAudioProcessorEditor::dragOperationEnded` also calls `LayerEditor::clearSampleDragState()`
+  so an abandoned drag undims the chip (the same reason `PadGrid::clearPadDragState()` is there).
