@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Minigun — User Manual</title>
+<link rel="stylesheet" href="manual.css">
+</head>
+<body>
+
+<section class="cover">
+  <div class="brand">MINIGUN</div>
+  <h1>Minigun Drum Sampler</h1>
+  <div class="sub">User Manual · VST3 &amp; Standalone · version 0.3</div>
+  <img src="img/ui_full.png" alt="Minigun main window">
+  <div class="meta">16 pads · velocity layers · round-robin / random · portable kits · 17 stereo outputs<br>Windows 10/11, 64-bit. Built with JUCE 8.</div>
+</section>
+
+<h2>1. What Minigun is</h2>
+<p>Minigun is a lightweight drum sampler in the spirit of hardware pad machines. Sixteen pads each hold one instrument: a MIDI note, up to eight velocity layers, and any number of samples per layer that alternate round-robin or at random. Every pad has its own volume, pan, pitch, envelope, choke group and output bus, so a whole kit can be mixed inside your DAW on separate tracks.</p>
+<p>Kits are <strong>portable</strong>: when you save a kit, Minigun copies every sample into the kit folder and stores relative paths, so the folder can be moved to another project or another computer without broken links.</p>
+
+<h3>Installation</h3>
+<ul>
+  <li><strong>VST3</strong>: copy <code>Minigun.vst3</code> (the whole folder) to <code>C:\Program Files\Common Files\VST3\</code>, then rescan plug-ins in your DAW. Minigun appears as <em>VST3i: Minigun (Dallas Audio)</em>.</li>
+  <li><strong>Standalone</strong>: run <code>Minigun.exe</code>. Use <em>Options → Audio/MIDI settings</em> to pick an audio device and a MIDI input. Only the Main output is available in Standalone.</li>
+</ul>
+<div class="note">The Standalone version and a DAW that holds an exclusive ASIO driver cannot use the same audio device at the same time. If Standalone shows <em>0 voices</em> and no meter movement, close the DAW or choose another device.</div>
+
+<h2 class="pagebreak">2. Interface overview</h2>
+<figure><img src="img/ui_full.png" alt="Main window"><figcaption>The fixed 1200 × 720 window. Everything is always visible; nothing is hidden in menus.</figcaption></figure>
+<ol class="callouts">
+  <li><strong>Header</strong> — kit name, Save / Load kit, MIDI indicator, output meter, master volume.</li>
+  <li><strong>Pads</strong> — 16 pads in MPC order (pad 1 bottom-left, pad 13 top-left). Click to play, drop audio files to assign.</li>
+  <li><strong>Pad editor</strong> — every setting of the selected pad: name, note, choke, output, mix and envelope knobs.</li>
+  <li><strong>Velocity layers</strong> — the velocity map of the selected pad and the samples inside each layer.</li>
+  <li><strong>Browser</strong> — a file browser with instant preview; drag files onto pads or layers.</li>
+  <li><strong>Footer</strong> — kit folder, active voices, and how many output buses the host has enabled.</li>
+</ol>
+
+<h2>3. Header</h2>
+<figure><img src="img/ui_header.png" alt="Header bar"></figure>
+<table>
+  <tr><th>Control</th><th>What it does</th></tr>
+  <tr><td>KIT display</td><td>Shows the kit name, how many pads have samples and the total sample count. The name is taken from the folder you save into (a kit called <em>Untitled Kit</em> is renamed automatically on first save).</td></tr>
+  <tr><td>SAVE KIT</td><td>Saves the kit. The first time it opens a folder picker (default location: <code>Documents\Minigun Kits</code>). Choose or create a folder: Minigun writes <code>kit.json</code> there and <strong>copies every sample</strong> into a <code>samples\</code> sub-folder. If the kit already has a folder, it saves there directly without asking.</td></tr>
+  <tr><td>LOAD KIT</td><td>Opens a folder picker. Select a folder that contains <code>kit.json</code>; all pads, layers and settings are replaced by that kit.</td></tr>
+  <tr><td>MIDI</td><td>Lights amber for a moment whenever a MIDI note-on arrives. Use it to confirm the DAW is routing MIDI to the plug-in.</td></tr>
+  <tr><td>OUT</td><td>Eight-segment stereo peak meter of the plug-in output (the loudest of all enabled buses). Teal segments are healthy, amber is hot.</td></tr>
+  <tr><td>Master knob</td><td>Master volume, −60 … +6 dB. This is the only DAW-automatable parameter; everything else belongs to the kit.</td></tr>
+</table>
+
+<h2 class="pagebreak">4. Pads</h2>
+<div class="two">
+  <figure><img src="img/ui_pads.png" alt="Pad grid"><figcaption>Pad 1 is selected (teal outline). Loaded pads show their name and one LED per velocity layer.</figcaption></figure>
+  <div>
+    <h3>What a pad shows</h3>
+    <ul>
+      <li><strong>Number</strong> (top-left) — pad 1…16 in MPC order.</li>
+      <li><strong>Note</strong> (top-right) — the MIDI note that triggers the pad, e.g. <code>C1 · 36</code>.</li>
+      <li><strong>LED strip</strong> — one lit LED per velocity layer (up to 8).</li>
+      <li><strong>Name</strong> — the pad name, or <em>EMPTY</em>.</li>
+    </ul>
+    <h3>Pad states</h3>
+    <ul>
+      <li><span class="swatch" style="background:#c9c5be"></span><strong>Empty</strong> — darker rubber, no LEDs.</li>
+      <li><span class="swatch" style="background:#e6e3dd"></span><strong>Loaded</strong> — light rubber, LEDs show the layer count.</li>
+      <li><span class="swatch" style="background:#38c7c1"></span><strong>Selected</strong> — teal outline; the editor and layer panel show this pad.</li>
+      <li><span class="swatch" style="background:#f2a33a"></span><strong>Playing</strong> — the pad lights up in the colour of the velocity layer that played (see §6).</li>
+    </ul>
+    <h3>Interactions</h3>
+    <ul>
+      <li><strong>Click</strong> a pad to select it and play it. The velocity follows the click height: top edge = 127, bottom edge = 1.</li>
+      <li><strong>Drop audio files</strong> from Explorer or from the Browser onto a pad. On an empty pad they become layer 1 (velocity 1–127). On a loaded pad they become a new top layer that takes the upper half of the previous top layer's range. Several files dropped together go into the same layer.</li>
+      <li>A pad is named automatically after its first sample when it has no name yet.</li>
+    </ul>
+  </div>
+</div>
+<div class="two">
+  <figure><img src="img/ui_glow_L1.png" alt="Soft hit"><figcaption>A soft hit (layer 1) lights the Kick pad dark brown…</figcaption></figure>
+  <figure><img src="img/ui_glow_L3.png" alt="Hard hit"><figcaption>…a hard hit (layer 3) lights it bright amber. The colours match the layer bar in §6.</figcaption></figure>
+</div>
+
+<h2 class="pagebreak">5. Pad editor</h2>
+<figure><img src="img/ui_pad_editor.png" alt="Pad editor"><figcaption>The editor always shows the selected pad (badge <em>1</em> = pad 1).</figcaption></figure>
+<table>
+  <tr><th>Control</th><th>What it does</th></tr>
+  <tr><td>Badge + name</td><td>The pad number and an editable name. Click the name, type, press <kbd>Enter</kbd>. The name is shown on the pad.</td></tr>
+  <tr><td>RR / RND</td><td>How samples inside a layer alternate. <strong>RR</strong> (round-robin) plays them in order 1, 2, 3, 1…; <strong>RND</strong> picks one at random on every hit. Use several similar samples per layer for a natural, non-machine-gun feel.</td></tr>
+  <tr><td>NOTE</td><td>The MIDI note that triggers the pad. Pick it from the drop-down (all 128 notes, <code>C1 · 36</code> style) or type the number into the field next to it and press <kbd>Enter</kbd>. The mouse wheel over the drop-down steps by one semitone. Several pads may share a note: they all play together.</td></tr>
+  <tr><td>CHOKE</td><td>Choke group, <em>—</em> or 1…8. Pads in the same group cut each other off: when one is hit, the others in that group are released immediately. Classic use: closed and open hi-hat in group 1, so the closed hat stops the open one.</td></tr>
+  <tr><td>LEARN / MIDI</td><td>MIDI learn. Click the button (it lights teal), then hit a key or pad on your controller: that note is assigned to the selected pad.</td></tr>
+  <tr><td>OUT</td><td>Output bus of the pad: <strong>Main</strong> or one of the 16 stereo pairs <strong>Out 1-2 … Out 31-32</strong>. See §9 for routing in the DAW.</td></tr>
+  <tr><td>ST / L / R</td><td>Stereo or mono output. <strong>ST</strong> sends the pad to both channels of the pair with panning. <strong>L</strong> sends a mono signal to the first (odd) channel only, <strong>R</strong> to the second (even) channel. In mono mode the OUT list shows single channels (<em>Main L</em>, <em>Out 3</em>, …) and Pan is ignored.</td></tr>
+  <tr><td>SUM</td><td>Only for L/R modes. On: a stereo sample is summed to mono ((L+R)/2) before it goes to the single channel. Off: only the sample channel that matches the side is used. Mono samples are unaffected.</td></tr>
+  <tr><td>Vol</td><td>Pad volume, −60 … +12 dB.</td></tr>
+  <tr><td>Pan</td><td>Stereo position, L100 … C … R100 (constant power). Not used in mono modes.</td></tr>
+  <tr><td>Pitch</td><td>Transposition by resampling, ±12 semitones in 0.1 steps. Positive values are shorter and brighter.</td></tr>
+  <tr><td>Atk</td><td>Attack, 0 … 500 ms: fade-in from the start of the sample. 0 ms = the natural transient.</td></tr>
+  <tr><td>Dec</td><td>Decay / hold length, 1 … 5000 ms. Fully right = <strong>Full</strong>: the sample plays to its end. Shorter values cut the tail and start the release.</td></tr>
+  <tr><td>Rel</td><td>Release, 1 … 2000 ms: the fade-out applied when the decay time ends, or when the pad is choked by another pad of its group.</td></tr>
+</table>
+<div class="two">
+  <figure><img src="img/ui_pad_editor_snare.png" alt="Snare routed to Out 1-2"><figcaption>Snare pad routed to the stereo pair <em>Out 1-2</em>.</figcaption></figure>
+  <figure><img src="img/ui_pad_editor_hh.png" alt="Hi-hat in choke group 1"><figcaption>Closed hi-hat: choke group 1, panned right, <em>Out 5-6</em>, short 60 ms release.</figcaption></figure>
+</div>
+<div class="two">
+  <figure><img src="img/ui_note_popup.png" alt="Note drop-down"><figcaption>The NOTE drop-down lists all 128 notes with their numbers.</figcaption></figure>
+  <figure><img src="img/ui_out_popup.png" alt="Output drop-down"><figcaption>The OUT drop-down: Main plus 16 stereo pairs.</figcaption></figure>
+</div>
+
+<h2 class="pagebreak">6. Velocity layers</h2>
+<figure><img src="img/ui_layers.png" alt="Velocity layers panel"><figcaption>Three layers on the Kick pad. Layer 2 holds two samples that alternate round-robin.</figcaption></figure>
+<p>A velocity layer is a velocity range (1–127) with its own list of samples. When a note arrives, Minigun finds the layer whose range contains the velocity, then picks one of its samples by the pad's RR/RND rule. Layers are contiguous and never overlap; the panel keeps them valid for you.</p>
+<table>
+  <tr><th>Control</th><th>What it does</th></tr>
+  <tr><td>Range bar</td><td>One coloured segment per layer, from dark (soft) to bright amber (hard). <strong>Drag the teal dividers</strong> to move the boundaries. <strong>Click inside a segment</strong> to audition that layer: the pad plays at the clicked velocity, so the layer and the RR/RND rule apply exactly as with a MIDI note.</td></tr>
+  <tr><td>+ LAYER</td><td>Adds a layer on top: the current top layer is split in half and the new (empty) layer takes the upper part. Up to 8 layers.</td></tr>
+  <tr><td>Layer rows</td><td>One row per layer, top layer first. The coloured badge (<em>L1</em>, <em>L2</em>…) matches the bar. Click a row to make it the <strong>selected layer</strong> (teal frame): the Browser's <em>ADD TO Lx</em> button and double-clicks add files to it.</td></tr>
+  <tr><td>Sample chip</td><td>One chip per sample. <strong>Click</strong> the name to preview the sample. <strong>Click ×</strong> to remove it from the layer (the file on disk is not touched).</td></tr>
+  <tr><td>+ add</td><td>Opens a file dialog (multi-select) and adds the chosen files to that layer.</td></tr>
+  <tr><td>Right-click a row</td><td><em>Delete layer</em>: removes the layer and gives its range to the neighbour below (or above for the lowest layer).</td></tr>
+  <tr><td>Drop target</td><td>Files dragged from Explorer or the Browser can be dropped on a row or on a bar segment (that layer) or anywhere else in the panel (the selected layer). The target is highlighted with a dashed teal frame while you drag.</td></tr>
+</table>
+<figure><img src="img/ui_layers_hh.png" alt="Single layer with two samples"><figcaption>A single full-range layer with two hi-hat samples: every hit alternates between them.</figcaption></figure>
+
+<h2 class="pagebreak">7. Browser</h2>
+<div class="two">
+  <figure><img src="img/ui_browser.png" alt="Browser"><figcaption>Audio files show a waveform icon; the playing file shows a play triangle. The footer shows the waveform and format of the selected file.</figcaption></figure>
+  <div>
+    <table>
+      <tr><th>Control</th><th>What it does</th></tr>
+      <tr><td>Preview</td><td>When on, a single click on a file plays it through the plug-in's Main output. Turn it off to browse silently.</td></tr>
+      <tr><td>‹ (arrow)</td><td>Go up one folder. From the root of a drive it opens the <em>Computer</em> level with all drives.</td></tr>
+      <tr><td>Path field</td><td>Shows the current folder. Click it, type a path to a folder or to an audio file and press <kbd>Enter</kbd>. A file path opens its folder and selects the file. <kbd>Esc</kbd> reverts.</td></tr>
+      <tr><td>Folder row</td><td>Single click frames the folder; double-click or <kbd>Enter</kbd> opens it.</td></tr>
+      <tr><td>File row</td><td>Single click selects and previews. Double-click or <kbd>Enter</kbd> adds the file to the selected layer of the selected pad. Drag a row onto a pad or onto the layer panel to add it there.</td></tr>
+      <tr><td>Waveform + info</td><td>Overview of the selected file with sample rate, bit depth and length.</td></tr>
+      <tr><td>ADD TO Lx</td><td>Adds the selected file to layer x of the selected pad (x = the layer selected in §6).</td></tr>
+    </table>
+    <p>Supported formats: WAV, AIFF, FLAC, OGG, MP3, WMA. The last folder is remembered between sessions.</p>
+  </div>
+</div>
+<div class="two">
+  <figure><img src="img/ui_browser_computer.png" alt="Drive list"><figcaption>The <em>Computer</em> level lists all drives.</figcaption></figure>
+  <figure><img src="img/ui_browser_folder.png" alt="Framed folder"><figcaption>A clicked folder gets a teal frame; double-click to enter.</figcaption></figure>
+</div>
+<h3>Navigation shortcuts</h3>
+<table>
+  <tr><th>Action</th><th>Result</th></tr>
+  <tr><td><kbd>Backspace</kbd></td><td>Up one level.</td></tr>
+  <tr><td>Mouse Back / Forward buttons</td><td>Back / forward through the folder history (while the pointer is over the browser).</td></tr>
+  <tr><td><kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd></td><td>Back / forward through the history.</td></tr>
+  <tr><td><kbd>Enter</kbd></td><td>Open the framed folder or add the selected file.</td></tr>
+  <tr><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>Move through the list.</td></tr>
+</table>
+
+<h2 class="pagebreak">8. Kits: saving, loading, moving</h2>
+<p>A kit is a folder. <strong>SAVE KIT</strong> creates this structure:</p>
+<pre><code>My Kit\
+  kit.json            all pad settings, layers and sample references
+  samples\
+    kick_01.wav       every sample used by the kit, copied here
+    kick_02.wav
+    ...</code></pre>
+<ul>
+  <li>Sample paths inside <code>kit.json</code> are relative to the kit folder, so the folder can be zipped, moved to another disk or another computer, and loaded with <strong>LOAD KIT</strong> without any missing files.</li>
+  <li>Files that are already inside <code>samples\</code> are not copied again. If two different files share a name, the second gets a <code>_2</code> suffix.</li>
+  <li>Removing a chip never deletes a file from disk.</li>
+  <li>In a DAW the complete kit is also stored in the project, so a project reopens exactly as it was saved even if you never pressed SAVE KIT. Save a kit when you want to reuse it in another project.</li>
+</ul>
+<div class="note warn">If a sample cannot be found when a kit or project is loaded, the pad keeps its settings but that sample is silent. Add the file again from the Browser or replace it via <em>+ add</em>.</div>
+
+<h2>9. Routing pads to separate DAW tracks</h2>
+<p>Minigun exposes <strong>17 stereo outputs</strong>: Main and Out 1-2 … Out 31-32 (34 channels). Each pad chooses its bus with the OUT drop-down, and can send a mono signal to a single channel with the L / R modes.</p>
+<h3>REAPER example</h3>
+<ol>
+  <li>Insert Minigun on a track. The FX window shows a button like <em>2/34 out</em>.</li>
+  <li>Set the track's channel count (track routing button) to as many channels as you need, e.g. 8 for Main + Out 1-2 + Out 3-4 + Out 5-6. REAPER enables exactly that many plug-in buses; the footer shows <em>outs 4/17</em>.</li>
+  <li>In Minigun set the Snare pad to <em>Out 1-2</em>, the Clap to <em>Out 3-4</em>, the hats to <em>Out 5-6</em>.</li>
+  <li>Create receive tracks: on a new track add a receive from the Minigun track with source channels 3/4 for the snare, 5/6 for the clap, 7/8 for the hats. Or use <em>Build multichannel routing for this plug-in</em> in the plug-in I/O window.</li>
+</ol>
+<p>Other DAWs work the same way: enable the plug-in's aux outputs and route each pair to its own track. A pad set to an output the host has not enabled falls back to Main, so nothing ever goes missing.</p>
+<h3>Mono outputs</h3>
+<p>To send a pad to one channel only, choose the pair in OUT and set <strong>L</strong> (odd channel) or <strong>R</strong> (even channel). With <strong>SUM</strong> on, a stereo sample is folded to mono; with SUM off, only the matching side of the sample is used.</p>
+
+<h2 class="pagebreak">10. Step-by-step examples</h2>
+<h3>A kick with three velocity layers</h3>
+<ol>
+  <li>Click pad 1. In the Browser go to your kick samples.</li>
+  <li>Double-click the softest sample: it becomes layer 1 (1–127).</li>
+  <li>Press <strong>+ LAYER</strong>: layer 2 appears above (65–127). Double-click a medium sample to add it there, then a second medium sample for round-robin.</li>
+  <li>Press <strong>+ LAYER</strong> again and add the hardest sample to layer 3.</li>
+  <li>Drag the dividers so the ranges feel right, e.g. 1–48, 49–96, 97–127. Click inside each segment to audition it.</li>
+</ol>
+<h3>Closed and open hi-hat that choke each other</h3>
+<ol>
+  <li>Drop a closed hat on pad 5 and an open hat on pad 6.</li>
+  <li>Set <strong>CHOKE</strong> to <em>1</em> on both pads.</li>
+  <li>Give the closed hat a short <strong>Rel</strong> (about 60 ms) so it cuts the open hat cleanly.</li>
+</ol>
+<h3>A snare on its own mixer track</h3>
+<ol>
+  <li>Select the snare pad, set <strong>OUT</strong> to <em>Out 1-2</em>.</li>
+  <li>In the DAW enable the plug-in's second output pair and route channels 3/4 to a new track.</li>
+</ol>
+<h3>A mono percussion hit on channel 5</h3>
+<ol>
+  <li>Select the pad, set <strong>OUT</strong> to <em>Out 5-6</em>, press <strong>L</strong>: the list now reads <em>Out 5</em>.</li>
+  <li>Leave <strong>SUM</strong> on if the sample is stereo and you want both sides folded in.</li>
+</ol>
+<h3>Assign a controller pad</h3>
+<ol>
+  <li>Select the pad, press <strong>MIDI</strong> (LEARN).</li>
+  <li>Hit the pad on your controller. The note is shown in NOTE and on the pad.</li>
+</ol>
+
+<h2>11. Shortcuts and gestures</h2>
+<table>
+  <tr><th>Where</th><th>Gesture</th><th>Result</th></tr>
+  <tr><td>Pad</td><td>Click (top / bottom)</td><td>Play loud / soft, select the pad</td></tr>
+  <tr><td>Pad</td><td>Drop files</td><td>New layer with those files</td></tr>
+  <tr><td>Range bar</td><td>Click segment</td><td>Audition that layer (RR/RND applies)</td></tr>
+  <tr><td>Range bar</td><td>Drag divider</td><td>Change velocity ranges</td></tr>
+  <tr><td>Layer row</td><td>Right-click</td><td>Delete layer</td></tr>
+  <tr><td>Chip</td><td>Click / click ×</td><td>Preview / remove sample</td></tr>
+  <tr><td>NOTE drop-down</td><td>Mouse wheel</td><td>±1 semitone</td></tr>
+  <tr><td>Browser</td><td><kbd>Backspace</kbd></td><td>Up one folder</td></tr>
+  <tr><td>Browser</td><td>Mouse Back / Forward, <kbd>Alt</kbd>+<kbd>←</kbd>/<kbd>→</kbd></td><td>History back / forward</td></tr>
+  <tr><td>Browser</td><td>Double-click / <kbd>Enter</kbd></td><td>Open folder or add file to the selected layer</td></tr>
+  <tr><td>Path field</td><td>Type path + <kbd>Enter</kbd></td><td>Jump to folder or file</td></tr>
+</table>
+
+<h2>12. Footer and troubleshooting</h2>
+<figure><img src="img/ui_footer.png" alt="Footer"></figure>
+<ul>
+  <li><strong>Kit folder</strong> — where the kit was saved or loaded from; <em>(unsaved)</em> until the first SAVE KIT.</li>
+  <li><strong>voices</strong> — samples currently sounding (32 maximum; the oldest is stolen when exceeded).</li>
+  <li><strong>outs N/17</strong> — how many output buses the host has enabled. In Standalone this is 1/17; in a DAW it grows with the track's channel count.</li>
+</ul>
+<table>
+  <tr><th>Symptom</th><th>Check</th></tr>
+  <tr><td>No sound in Standalone</td><td>Options → Audio/MIDI settings: pick an output device. Another program (a DAW with ASIO) may hold the device exclusively.</td></tr>
+  <tr><td>Pads light but a pad is silent</td><td>Its samples may be missing (moved or renamed on disk). Re-add them; then SAVE KIT so they are copied into the kit folder.</td></tr>
+  <tr><td>Pad routed to Out 5-6 comes out of Main</td><td>The host has not enabled that bus. Increase the track channel count or enable the plug-in's outputs; the footer <em>outs</em> value shows how many are active.</td></tr>
+  <tr><td>Plug-in not listed in the DAW</td><td>Make sure <code>Minigun.vst3</code> is in <code>C:\Program Files\Common Files\VST3</code> and rescan plug-ins.</td></tr>
+  <tr><td>Wrong pad plays from the keyboard</td><td>Check NOTE on each pad; several pads may share a note. Use LEARN to assign quickly.</td></tr>
+</table>
+<p class="small">Minigun v0.3 · Dallas Audio · Manual generated September 2026.</p>
+</body>
+</html>

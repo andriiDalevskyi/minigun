@@ -1,0 +1,11 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1216, "h": 736, "title": "Minigun — main window" },
+    { "file": "PadStates.dc.html", "x": 0, "y": 880, "w": 1016, "h": 316, "title": "Pad states" }
+  ],
+  "annotations": [
+    { "id": "layout-note", "x": 1280, "y": 0, "w": 300, "text": "Fixed window 1200×720 (JUCE, no resize in v0.1).\n\nLeft: 16 pads, MPC order (pad 1 bottom-left). Click = play (velocity by click height), drop audio = assign.\n\nMiddle: pad editor (note, RR/RND, choke, 6 knobs) + velocity layer editor: drag teal dividers, chips = samples in a layer.\n\nRight: built-in browser. Single click = preview through plugin output when Preview toggle is on; double-click / drag = add to selected layer." },
+    { "id": "kit-note", "x": 1280, "y": 300, "w": 300, "text": "Save kit → picks a folder, copies every sample into <Kit>/samples/, writes kit.json with relative paths. Kit is fully portable between DAW projects." }
+  ],
+  "launch": { "view": "canvas" }
+}
