@@ -10,7 +10,7 @@
 <section class="cover">
   <div class="brand">MINIGUN</div>
   <h1>Minigun Drum Sampler</h1>
-  <div class="sub">User Manual · VST3 &amp; Standalone · version 0.3.7</div>
+  <div class="sub">User Manual · VST3 &amp; Standalone · version 0.3.9</div>
   <img src="img/ui_full.png" alt="Minigun main window">
   <div class="meta">16 pads · velocity layers · round-robin / random · portable kits · 17 stereo outputs<br>Windows 10/11, 64-bit. Built with JUCE 8.</div>
 </section>
@@ -93,6 +93,7 @@
   <tr><td>LEARN / MIDI</td><td>MIDI learn. Click the button (it lights teal), then hit a key or pad on your controller: that note is assigned to the selected pad.</td></tr>
   <tr><td>OUT</td><td>Output bus of the pad: <strong>Main</strong> or one of the 16 stereo pairs <strong>Out 1-2 … Out 31-32</strong>. See §9 for routing in the DAW.</td></tr>
   <tr><td>ST / L / R</td><td>Stereo or mono output. <strong>ST</strong> sends the pad to both channels of the pair with panning. <strong>L</strong> sends a mono signal to the first (odd) channel only, <strong>R</strong> to the second (even) channel. In mono mode the OUT list shows single channels (<em>Main L</em>, <em>Out 3</em>, …) and Pan is ignored.</td></tr>
+  <tr><td>VEL</td><td>Velocity &rarr; volume. <strong>On</strong> (default): the MIDI velocity scales the pad's level, so a soft hit is quieter (velocity 64 &asymp; &minus;6 dB, 32 &asymp; &minus;12 dB). <strong>Off</strong>: every hit plays at full level &mdash; the velocity still chooses the layer and the RR/RND sample, it just no longer changes the volume. Useful for 808-style one-shots and for kits whose layers are already recorded at the right level. <kbd>Ctrl</kbd>+click the button to set all 16 pads at once.</td></tr>
   <tr><td>SUM</td><td>Only for L/R modes. On: a stereo sample is summed to mono ((L+R)/2) before it goes to the single channel. Off: only the sample channel that matches the side is used. Mono samples are unaffected.</td></tr>
   <tr><td>Vol</td><td>Pad volume, −60 … +12 dB.</td></tr>
   <tr><td>Pan</td><td>Stereo position, L100 … C … R100 (constant power). Not used in mono modes.</td></tr>
@@ -118,7 +119,7 @@
   <tr><td>Range bar</td><td>One coloured segment per layer, from dark (soft) to bright amber (hard). <strong>Drag the teal dividers</strong> to move the boundaries. <strong>Click inside a segment</strong> to audition that layer: the pad plays at the clicked velocity, so the layer and the RR/RND rule apply exactly as with a MIDI note.</td></tr>
   <tr><td>+ LAYER</td><td>Adds a layer on top: the current top layer is split in half and the new (empty) layer takes the upper part. Up to 8 layers.</td></tr>
   <tr><td>Layer rows</td><td>One row per layer, top layer first. The coloured badge (<em>L1</em>, <em>L2</em>…) matches the bar. Click a row to make it the <strong>selected layer</strong> (teal frame): the Browser's <em>ADD TO Lx</em> button and double-clicks add files to it.</td></tr>
-  <tr><td>Sample chip</td><td>One chip per sample. <strong>Click</strong> the name to preview the sample. <strong>Click ×</strong> to remove it from the layer (the file on disk is not touched).</td></tr>
+  <tr><td>Sample chip</td><td>One chip per sample. <strong>Click</strong> the name to preview the sample. <strong>Click ×</strong> to remove it from the layer (the file on disk is not touched). <strong>Drag</strong> a chip to reorder it inside its layer or to move it to another layer row / bar segment: a teal caret shows the exact slot where it will land, and holding <kbd>Ctrl</kbd> on release copies the sample instead of moving it.</td></tr>
   <tr><td>+ add</td><td>Opens a file dialog (multi-select) and adds the chosen files to that layer.</td></tr>
   <tr><td>× (row) / − LAYER</td><td>Deletes a layer: the <strong>×</strong> in the top-right corner of a row removes that layer; <strong>− LAYER</strong> in the panel header removes the selected layer. Right-click on a row offers the same <em>Delete layer</em>. The removed range goes to the neighbour below (or above for the lowest layer); samples on disk are untouched.</td></tr>
   <tr><td>Drop target</td><td>Files dragged from Explorer or the Browser can be dropped on a row or on a bar segment (that layer) or anywhere else in the panel (the selected layer). The target is highlighted with a dashed teal frame while you drag.</td></tr>
@@ -226,6 +227,8 @@
   <tr><td>Range bar</td><td>Drag divider</td><td>Change velocity ranges</td></tr>
   <tr><td>Layer row</td><td>× / right-click, or − LAYER</td><td>Delete layer</td></tr>
   <tr><td>Chip</td><td>Click / click ×</td><td>Preview / remove sample</td></tr>
+  <tr><td>Chip</td><td>Drag (hold <kbd>Ctrl</kbd> to copy)</td><td>Reorder inside the layer or move to another layer</td></tr>
+  <tr><td>VEL button</td><td><kbd>Ctrl</kbd>+click</td><td>Set velocity &rarr; volume for all 16 pads</td></tr>
   <tr><td>NOTE drop-down</td><td>Mouse wheel</td><td>±1 semitone</td></tr>
   <tr><td>Browser</td><td><kbd>Backspace</kbd></td><td>Up one folder</td></tr>
   <tr><td>Browser</td><td>Mouse Back / Forward, <kbd>Alt</kbd>+<kbd>←</kbd>/<kbd>→</kbd></td><td>History back / forward</td></tr>

@@ -149,6 +149,17 @@ PadEditorPanel::PadEditorPanel (MinigunAudioProcessor& processorIn) : processor 
     };
     addAndMakeVisible (sumButton);
 
+    // VEL: lit = MIDI velocity scales the pad's volume (classic behaviour). Off = every hit plays at
+    // full level; the velocity still chooses the layer. Ctrl+click sets every pad at once.
+    velButton.setClickingTogglesState (true);
+    velButton.setTooltip ("Velocity controls volume (off: every hit at full level, layers still follow velocity). Ctrl+click = all pads");
+    velButton.onClick = [this]
+    {
+        setVelocityToVolumeFromUI (velButton.getToggleState(),
+                                   juce::ModifierKeys::getCurrentModifiers().isCommandDown());
+    };
+    addAndMakeVisible (velButton);
+
     static const char* names[6]  = { "Vol", "Pan", "Pitch", "Atk", "Dec", "Rel" };
     for (int i = 0; i < 6; ++i)
     {
@@ -251,6 +262,18 @@ void PadEditorPanel::setOutputModeFromUI (OutputMode mode)
     sumButton.setAlpha ((mode != OutputMode::Stereo) ? 1.0f : 0.35f); // dim when stereo: SUM only matters for mono outputs
 }
 
+void PadEditorPanel::setVelocityToVolumeFromUI (bool on, bool applyToAllPads)
+{
+    writeAndNotify ([this, on, applyToAllPads]
+    {
+        auto& pads = processor.getKit().pads;
+        if (applyToAllPads)
+            for (auto& p : pads) p.velocityToVolume = on;
+        else
+            pads[(size_t) currentPadIndex].velocityToVolume = on;
+    });
+}
+
 void PadEditorPanel::refresh()
 {
     const bool padChanged = (processor.getSelectedPad() != currentPadIndex);
@@ -280,6 +303,8 @@ void PadEditorPanel::refresh()
     sumButton.setToggleState (pad.monoSum, juce::dontSendNotification);
     sumButton.setEnabled (pad.outputMode != OutputMode::Stereo);
     sumButton.setAlpha ((pad.outputMode != OutputMode::Stereo) ? 1.0f : 0.35f); // dim when stereo: SUM only matters for mono outputs
+
+    velButton.setToggleState (pad.velocityToVolume, juce::dontSendNotification);
 
     knobs[0]->slider.setValue (pad.volumeDb, juce::dontSendNotification);
     knobs[1]->slider.setValue (pad.pan, juce::dontSendNotification);
@@ -357,11 +382,13 @@ void PadEditorPanel::resized()
     // Row 3: OUT combo, ST|L|R mode toggle, SUM.
     auto row3 = area.removeFromTop (44);
     row3.removeFromTop (14);
-    auto outCol = row3.removeFromLeft (128);
-    row3.removeFromLeft (10);
-    auto modeCol = row3.removeFromLeft (90);
-    row3.removeFromLeft (10);
-    auto sumCol = row3.removeFromLeft (54);
+    auto outCol = row3.removeFromLeft (112);
+    row3.removeFromLeft (8);
+    auto modeCol = row3.removeFromLeft (84);
+    row3.removeFromLeft (8);
+    auto sumCol = row3.removeFromLeft (48);
+    row3.removeFromLeft (8);
+    auto velCol = row3.removeFromLeft (48);
 
     outCombo.setBounds (outCol.withHeight (30));
 
@@ -371,6 +398,7 @@ void PadEditorPanel::resized()
     modeRButton.setBounds (modeCol);
 
     sumButton.setBounds (sumCol.withHeight (30));
+    velButton.setBounds (velCol.withHeight (30));
 
     area.removeFromTop (6);
 

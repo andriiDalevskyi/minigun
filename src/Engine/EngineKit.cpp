@@ -28,6 +28,7 @@ std::shared_ptr<const EngineKit> EngineKit::build (const Kit& kit, SampleLoader&
         dst.output = src.output;
         dst.outputMode = src.outputMode;
         dst.monoSum = src.monoSum;
+        dst.velocityToVolume = src.velocityToVolume;
 
         dst.layers.reserve (src.layers.size());
         for (auto& srcLayer : src.layers)

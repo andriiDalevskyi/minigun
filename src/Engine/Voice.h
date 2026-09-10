@@ -22,6 +22,7 @@ public:
         (padIndex == -1 identifies a preview voice, which choke never touches). */
     void start (std::shared_ptr<const LoadedSample> sampleToPlay,
                 int velocity,
+                bool velocityToVolume,
                 float volumeDb,
                 float pan,
                 float pitchSemitones,

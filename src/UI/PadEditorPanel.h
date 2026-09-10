@@ -50,6 +50,7 @@ private:
     juce::TextButton modeLButton  { "L" };
     juce::TextButton modeRButton  { "R" };
     juce::TextButton sumButton    { "SUM" };
+    juce::TextButton velButton    { "VEL" };
 
     struct Knob
     {
@@ -74,6 +75,8 @@ private:
     void setNoteFromUI (int note);
     /** Writes outputMode to the model, refreshes OUT combo labels and SUM enablement. */
     void setOutputModeFromUI (OutputMode mode);
+    /** Writes velocityToVolume to the selected pad, or to every pad when applyToAllPads. */
+    void setVelocityToVolumeFromUI (bool on, bool applyToAllPads);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PadEditorPanel)
 };

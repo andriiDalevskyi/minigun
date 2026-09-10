@@ -36,6 +36,7 @@ struct EnginePad
     int output = 0;
     OutputMode outputMode = OutputMode::Stereo;
     bool monoSum = true;
+    bool velocityToVolume = true;
     std::vector<EngineLayer> layers;
 };
 

@@ -51,6 +51,7 @@ struct Pad
     int output = 0;                    // 0 = Main, 1..16 = aux stereo bus
     OutputMode outputMode = OutputMode::Stereo;
     bool monoSum = true;               // mono modes only: true = sum L+R of a stereo sample, false = pick the matching side
+    bool velocityToVolume = true;      // true = MIDI velocity scales the voice gain; false = every hit plays at full level
     std::vector<VelocityLayer> layers; // sorted by lo ascending, contiguous 1..127 when non-empty
 
     bool isEmpty() const noexcept
@@ -142,6 +143,7 @@ struct Kit
                                        : p.outputMode == OutputMode::MonoRight ? "monoR"
                                                                                 : "stereo");
             po->setProperty ("monoSum", p.monoSum);
+            po->setProperty ("velToVol", p.velocityToVolume);
 
             juce::Array<juce::var> layerArr;
             for (auto& l : p.layers)
@@ -203,6 +205,7 @@ struct Kit
                                                        : OutputMode::Stereo;
                 }
                 p.monoSum = (bool) pv.getProperty ("monoSum", true);
+                p.velocityToVolume = (bool) pv.getProperty ("velToVol", true); // older kits had no key: keep the classic behaviour
 
                 p.layers.clear();
                 if (auto* layerArr = pv.getProperty ("layers", juce::var()).getArray())

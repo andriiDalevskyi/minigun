@@ -10,7 +10,9 @@ Lightweight VST3 / Standalone drum sampler built with JUCE 8. Sixteen MPC-style 
 
 - **16 pads** in MPC order (pad 1 bottom-left). Click to play with velocity from the click height; drop audio files from Explorer or the built-in browser to assign them.
 - **Velocity layers**: up to 8 per pad, draggable range dividers, click a segment to audition that layer. Any number of samples per layer, alternated **round-robin** or **random**.
+- **Drag & drop inside the plug-in**: drag a pad onto another pad to move it (with confirmation), drag a sample chip to reorder it or move it to another layer (Ctrl on drop copies).
 - **Per-pad settings**: MIDI note (drop-down + number field, MIDI learn), choke group, volume, pan, pitch ±12 st, attack / decay / release.
+- **Velocity → volume switch** (**VEL**, per pad): on = velocity scales the level (default), off = every hit plays at full level while the velocity still picks the layer. Ctrl+click the button to set all 16 pads at once.
 - **Outputs**: Main + 16 aux stereo buses (34 channels). Each pad picks its bus and can go **stereo** or **mono** to a single channel, with optional stereo-to-mono summing.
 - **Pads glow in the colour of the layer that played**, from MIDI and from mouse clicks alike.
 - **Undo / Redo** for every kit edit (header buttons, Ctrl+Z / Ctrl+Y), with knob sweeps and typing merged into single steps.
@@ -64,7 +66,7 @@ My Kit\
   "pads": [ { "index": 0, "name": "Kick", "note": 36, "mode": "rr", "choke": 0,
               "volumeDb": 0.0, "pan": 0.0, "pitch": 0.0,
               "attackMs": 0.0, "decayMs": -1, "releaseMs": 120,
-              "output": 0, "outMode": "stereo", "monoSum": true,
+              "output": 0, "outMode": "stereo", "monoSum": true, "velToVol": true,
               "layers": [ { "lo": 1, "hi": 127, "samples": ["samples/kick_01.wav"] } ] } ] }
 ```
 
@@ -105,7 +107,9 @@ Binaries in the Releases section are built from this source; the corresponding s
 
 - **16 педів** у порядку MPC (пед 1 знизу зліва). Клік грає з velocity за висотою кліку; аудіофайли з Провідника або вбудованого браузера призначаються перетягуванням.
 - **Велосіті-леєри**: до 8 на пед, розділювачі діапазонів тягнуться мишею, клік по сегменту прослуховує леєр. У леєрі будь-яка кількість семплів, що чергуються **round-robin** або **випадково**.
+- **Drag & drop усередині плагіна**: пед перетягується на інший пед (з підтвердженням), семпл-чіп — на іншу позицію в леєрі або в інший леєр (Ctrl при відпусканні копіює).
 - **Налаштування педа**: MIDI-нота (дропдаун + числове поле, MIDI learn), choke-група, гучність, панорама, висота ±12 півтонів, attack / decay / release.
+- **Перемикач velocity → гучність** (**VEL**, окремо на кожен пед): увімкнено — velocity масштабує рівень (типово), вимкнено — кожен удар грає на повній гучності, а velocity все одно обирає леєр. Ctrl+клік по кнопці — одразу на всі 16 педів.
 - **Виходи**: Main + 16 додаткових стерео-шин (34 канали). Кожен пед обирає шину і може йти **стерео** або **моно** на один канал, з опційним сумуванням стерео-семпла в моно.
 - **Педи світяться кольором леєра, який зіграв**, і від MIDI, і від кліку мишею.
 - **Undo / Redo** для всіх змін кіта (кнопки в шапці, Ctrl+Z / Ctrl+Y); обертання регулятора чи набір назви — один крок.
@@ -159,7 +163,7 @@ cmake --build build --config Release --target Minigun_VST3 Minigun_Standalone
   "pads": [ { "index": 0, "name": "Kick", "note": 36, "mode": "rr", "choke": 0,
               "volumeDb": 0.0, "pan": 0.0, "pitch": 0.0,
               "attackMs": 0.0, "decayMs": -1, "releaseMs": 120,
-              "output": 0, "outMode": "stereo", "monoSum": true,
+              "output": 0, "outMode": "stereo", "monoSum": true, "velToVol": true,
               "layers": [ { "lo": 1, "hi": 127, "samples": ["samples/kick_01.wav"] } ] } ] }
 ```
 

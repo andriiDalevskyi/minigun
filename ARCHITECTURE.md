@@ -72,7 +72,7 @@ Default kits root: `File::getSpecialLocation(userDocumentsDirectory)/"Minigun Ki
 - `EngineKit` (immutable): per pad → per layer → vector<shared_ptr<const LoadedSample>> (missing samples skipped), plus a copy of pad params; per-pad `std::atomic<int> rrCounter` lives in `SamplerEngine`, not in the snapshot.
 - `LoadedSample`: `juce::AudioBuffer<float>` (1 or 2 channels), `sampleRate`, `file`.
 - Note-on (channel ignored): for EVERY pad whose `note` matches (several pads may share a note): pick layer where `lo <= vel <= hi` (if none — nearest layer); pick sample by mode (RR: counter++ % n; Random: juce::Random); if `chokeGroup != 0` release all voices whose pad has the same choke group; start a voice. Note-off is ignored (one-shot).
-- Voice: playback ratio = `sample.sampleRate / hostSampleRate * 2^(pitch/12)`; linear interpolation; mono samples duplicated to both channels; gain = `Decibels::decibelsToGain(volumeDb) * velocity/127` (linear velocity curve); constant-power pan. Envelope: attack (linear ramp), then hold until `decayMs` elapsed (or until sample end when -1), then release ramp (`releaseMs`); choke → immediate release ramp. Voice ends when sample ends or release finishes. 32 voices; steal the oldest.
+- Voice: playback ratio = `sample.sampleRate / hostSampleRate * 2^(pitch/12)`; linear interpolation; mono samples duplicated to both channels; gain = `Decibels::decibelsToGain(volumeDb) * velocityGain`, where `velocityGain = velocity/127` (linear velocity curve) when the pad's `velocityToVolume` is on, else 1.0; constant-power pan. Envelope: attack (linear ramp), then hold until `decayMs` elapsed (or until sample end when -1), then release ramp (`releaseMs`); choke → immediate release ramp. Voice ends when sample ends or release finishes. 32 voices; steal the oldest.
 - Master gain applied after summing. Peak metering per block.
 - processBlock must not allocate, lock (except ScopedTryLock), or touch juce::File.
 
@@ -166,3 +166,17 @@ slot in its own layer (reorder) or onto another layer.
   selected layer.
 - `MinigunAudioProcessorEditor::dragOperationEnded` also calls `LayerEditor::clearSampleDragState()`
   so an abandoned drag undims the chip (the same reason `PadGrid::clearPadDragState()` is there).
+
+## Velocity → volume switch (v0.3.9)
+
+- `Pad::velocityToVolume` (bool, default **true** = the classic behaviour). JSON key `"velToVol"`;
+  a kit or DAW state without the key loads as `true`, so old kits sound unchanged.
+- Mirrored on `EnginePad` and passed to `Voice::start (sample, velocity, velocityToVolume, ...)`,
+  which sets `velocityGain = velocityToVolume ? velocity/127 : 1.0f`. Everything else about the hit
+  is untouched: the velocity still selects the layer, still drives round-robin / random, and still
+  lights the pad, so switching this off only removes the level scaling.
+- The browser preview voice always passes `true` (it plays at velocity 127 anyway).
+- UI: **VEL** toggle button in PadEditorPanel row 3, right of SUM (row widths were trimmed to
+  OUT 112 / mode 84 / SUM 48 / VEL 48 to stay inside the 360-px middle column). Lit = on.
+  **Ctrl+click** writes the new state to all 16 pads in one undo step
+  (`setVelocityToVolumeFromUI (on, applyToAllPads)`).

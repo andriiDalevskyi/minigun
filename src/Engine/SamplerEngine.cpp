@@ -140,7 +140,7 @@ void SamplerEngine::triggerPadInternal (int padIndex, int velocity) noexcept
                 v.triggerRelease();
 
     Voice* voice = stealVoice();
-    voice->start (sampleToPlay, velocity, pad.volumeDb, pad.pan, pad.pitchSemitones,
+    voice->start (sampleToPlay, velocity, pad.velocityToVolume, pad.volumeDb, pad.pan, pad.pitchSemitones,
                   pad.attackMs, pad.decayMs, pad.releaseMs, currentSampleRate,
                   padIndex, pad.chokeGroup, pad.output, pad.outputMode, pad.monoSum, ++voiceStartCounter);
 
@@ -181,7 +181,7 @@ void SamplerEngine::processBlock (juce::AudioProcessor& proc, juce::AudioBuffer<
         if (tryLock.isLocked())
         {
             auto s = pendingPreviewSample;
-            previewVoice.start (s, 127, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 30.0f,
+            previewVoice.start (s, 127, true, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 30.0f,
                                  currentSampleRate, -1, 0, 0, OutputMode::Stereo, true, ++voiceStartCounter);
         }
         else

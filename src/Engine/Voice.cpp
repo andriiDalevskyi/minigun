@@ -15,6 +15,7 @@ namespace
 
 void Voice::start (std::shared_ptr<const LoadedSample> sampleToPlay,
                     int velocity,
+                    bool velocityToVolume,
                     float volumeDb,
                     float pan,
                     float pitchSemitones,
@@ -39,7 +40,8 @@ void Voice::start (std::shared_ptr<const LoadedSample> sampleToPlay,
     readPos = 0.0;
 
     baseGain = juce::Decibels::decibelsToGain (volumeDb);
-    velocityGain = juce::jlimit (0.0f, 1.0f, (float) velocity / 127.0f);
+    // Velocity tracking off: the hit still picks its velocity layer, it just plays at full level.
+    velocityGain = velocityToVolume ? juce::jlimit (0.0f, 1.0f, (float) velocity / 127.0f) : 1.0f;
 
     float t = juce::jlimit (0.0f, 1.0f, (pan + 1.0f) * 0.5f);
     panLeftGain = std::cos (t * kHalfPi);
