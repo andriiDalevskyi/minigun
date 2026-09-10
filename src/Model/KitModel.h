@@ -1,3 +1,7 @@
+// Minigun drum sampler - Copyright (C) 2026 Andrii Dalevskyi (Dallas Audio)
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// This file is part of Minigun, released under the GNU AGPL v3.0 or later; see LICENSE.
+
 #pragma once
 #include <juce_core/juce_core.h>
 #include <array>

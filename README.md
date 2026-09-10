@@ -84,6 +84,16 @@ Default kits folder: `Documents\Minigun Kits`.
 - `design/` — design canvas (`Main.dc.html`, `PadStates.dc.html`)
 - `docs/` — manuals
 
+## License
+
+Minigun is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License v3.0** (see [LICENSE](LICENSE)). Copyright © 2026 Andrii Dalevskyi (Dallas Audio).
+
+Third-party components:
+- [JUCE](https://juce.com) © Raw Material Software Limited — used under the AGPLv3.
+- VST3 SDK © Steinberg Media Technologies GmbH — used under the GPLv3. *VST* is a trademark of Steinberg Media Technologies GmbH.
+
+Binaries in the Releases section are built from this source; the corresponding source is this repository at the tagged commit.
+
 ---
 
 # Minigun (українською)
@@ -167,3 +177,13 @@ cmake --build build --config Release --target Minigun_VST3 Minigun_Standalone
 - `src/UI` — компоненти інтерфейсу за дизайном у `design/`
 - `design/` — дизайн-полотно (`Main.dc.html`, `PadStates.dc.html`)
 - `docs/` — інструкції
+
+## Ліцензія
+
+Minigun — вільне програмне забезпечення: його можна поширювати і змінювати на умовах **GNU Affero General Public License v3.0** (див. [LICENSE](LICENSE)). © 2026 Андрій Далевський (Dallas Audio).
+
+Сторонні компоненти:
+- [JUCE](https://juce.com) © Raw Material Software Limited — використовується за AGPLv3.
+- VST3 SDK © Steinberg Media Technologies GmbH — за GPLv3. *VST* — торгова марка Steinberg Media Technologies GmbH.
+
+Бінарники у розділі Releases зібрані з цього репозиторію; відповідний вихідний код — коміт із тим самим тегом.
