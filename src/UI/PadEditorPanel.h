@@ -5,6 +5,7 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Model/KitModel.h"
+#include "ClickFocusTextEditor.h"
 #include <array>
 #include <functional>
 
@@ -35,13 +36,13 @@ public:
 private:
     MinigunAudioProcessor& processor;
 
-    juce::TextEditor nameEditor;
+    ClickFocusTextEditor nameEditor;
     juce::TextButton rrButton   { "RR" };
     juce::TextButton rndButton  { "RND" };
     juce::TextButton learnButton { "MIDI" };
 
     juce::ComboBox noteCombo;
-    juce::TextEditor noteNumberEditor;
+    ClickFocusTextEditor noteNumberEditor;
     juce::ComboBox chokeCombo;
 
     juce::ComboBox outCombo;

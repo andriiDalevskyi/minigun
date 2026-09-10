@@ -6,6 +6,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "WinMouseXButtons.h"
+#include "ClickFocusTextEditor.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -71,7 +72,7 @@ private:
     juce::Label previewLabel { {}, "Preview" };
     juce::Rectangle<int> upArrowBounds;
     juce::Rectangle<int> pathLcdBounds;
-    juce::TextEditor pathEditor;   // editable path shown inside the LCD; Enter navigates, Esc reverts
+    ClickFocusTextEditor pathEditor;   // editable path shown inside the LCD; Enter navigates, Esc reverts
 
     class ListModel;
     std::unique_ptr<ListModel> listModel;

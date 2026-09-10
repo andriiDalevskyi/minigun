@@ -29,6 +29,9 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
     bool keyPressed (const juce::KeyPress&) override; // Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z
+    /** Receives every mouse-down in the window (registered as a listener on all children): a click
+        anywhere outside a focused text field moves the keyboard focus back to the editor root. */
+    void mouseDown (const juce::MouseEvent&) override;
 
 private:
     MinigunAudioProcessor& audioProcessor;

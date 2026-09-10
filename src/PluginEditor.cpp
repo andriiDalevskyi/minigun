@@ -23,6 +23,7 @@ MinigunAudioProcessorEditor::MinigunAudioProcessorEditor (MinigunAudioProcessor&
     // the host focuses the FX window on mouse-over; clicking on empty space also lands here, which
     // makes text fields commit on any click elsewhere.
     setWantsKeyboardFocus (true);
+    addMouseListener (this, true); // see mouseDown(): clicks anywhere release text-field focus
 
     addAndMakeVisible (header);
     addAndMakeVisible (padGrid);
@@ -141,6 +142,18 @@ void MinigunAudioProcessorEditor::handleAddToLayer (juce::Array<juce::File> file
 
     audioProcessor.kitEdited();
     refreshAll();
+}
+
+void MinigunAudioProcessorEditor::mouseDown (const juce::MouseEvent& e)
+{
+    // If a text field has focus and the click landed anywhere else (a knob, a pad, empty space),
+    // take the focus back so stray keystrokes cannot edit the field.
+    if (auto* focused = dynamic_cast<juce::TextEditor*> (juce::Component::getCurrentlyFocusedComponent()))
+    {
+        auto* clicked = e.eventComponent;
+        if (clicked != focused && ! focused->isParentOf (clicked))
+            grabKeyboardFocus();
+    }
 }
 
 bool MinigunAudioProcessorEditor::keyPressed (const juce::KeyPress& key)
