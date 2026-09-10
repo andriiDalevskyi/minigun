@@ -156,6 +156,29 @@ public:
         g.setColour (badgeTextFor (badgeTop));
         g.setFont (MinigunLookAndFeel::sansFont (12.0f, true));
         g.drawText ("L" + juce::String (layerIndex + 1), badgeBounds, juce::Justification::centred);
+
+        // Delete button (x) in the top-right corner, same style as the chip remove button.
+        auto xBox = deleteButtonBounds().toFloat();
+        g.setColour (deleteHover ? MinigunLookAndFeel::amber : MinigunLookAndFeel::label);
+        auto xArea = xBox.reduced (6.0f);
+        g.drawLine (xArea.getX(), xArea.getY(), xArea.getRight(), xArea.getBottom(), 1.6f);
+        g.drawLine (xArea.getRight(), xArea.getY(), xArea.getX(), xArea.getBottom(), 1.6f);
+    }
+
+    juce::Rectangle<int> deleteButtonBounds() const
+    {
+        return { getWidth() - 10 - 20, 13, 20, 20 };
+    }
+
+    void mouseMove (const juce::MouseEvent& e) override
+    {
+        bool over = deleteButtonBounds().contains (e.getPosition());
+        if (over != deleteHover) { deleteHover = over; repaint (deleteButtonBounds()); }
+    }
+
+    void mouseExit (const juce::MouseEvent&) override
+    {
+        if (deleteHover) { deleteHover = false; repaint (deleteButtonBounds()); }
     }
 
     void mouseDown (const juce::MouseEvent& e) override
@@ -169,6 +192,10 @@ public:
                 if (result == 1 && onDeleteRequested) onDeleteRequested();
             });
         }
+        else if (deleteButtonBounds().contains (e.getPosition()))
+        {
+            if (onDeleteRequested) onDeleteRequested();
+        }
         else
         {
             if (onSelect) onSelect();
@@ -177,6 +204,7 @@ public:
 
 private:
     juce::Rectangle<int> badgeBounds { 10, 10, 26, 26 };
+    bool deleteHover = false;
     std::vector<std::unique_ptr<SampleChip>> chips;
     AddChip addChip;
 
@@ -190,9 +218,11 @@ private:
         int y = pad;
         int startX = x;
 
+        const int rightLimit = width - pad - 24; // keep the top-right delete button clear of chips
+
         auto place = [&] (int w)
         {
-            if (x + w > width - pad && x > startX)
+            if (x + w > rightLimit && x > startX)
             {
                 x = startX;
                 y += rowH + gap;
@@ -261,6 +291,14 @@ LayerEditor::LayerEditor (MinigunAudioProcessor& processorIn) : processor (proce
     addLayerButton.onClick = [this] { addNewLayer(); };
     addAndMakeVisible (addLayerButton);
 
+    removeLayerButton.setTooltip ("Delete the selected layer (its velocity range goes to the neighbour)");
+    removeLayerButton.onClick = [this]
+    {
+        if (! currentPad().layers.empty())
+            deleteLayer (selectedLayer);
+    };
+    addAndMakeVisible (removeLayerButton);
+
     rowsContainer = std::make_unique<RowsContainer>();
     rowsViewport.setViewedComponent (rowsContainer.get(), false);
     rowsViewport.setScrollBarsShown (true, false);
@@ -312,6 +350,9 @@ void LayerEditor::refresh()
     int n = (int) pad.layers.size();
     if (n == 0) selectedLayer = 0;
     else selectedLayer = juce::jlimit (0, n - 1, selectedLayer < 0 ? n - 1 : selectedLayer);
+
+    removeLayerButton.setEnabled (n > 0);
+    removeLayerButton.setAlpha (n > 0 ? 1.0f : 0.35f);
 
     int width = rowsViewport.getWidth() > 0 ? rowsViewport.getMaximumVisibleWidth() : getWidth() - 8;
     width = juce::jmax (width, 100);
@@ -456,6 +497,8 @@ void LayerEditor::resized()
     auto content = getLocalBounds().reduced (14);
     auto headerRow = content.removeFromTop (24);
     addLayerButton.setBounds (headerRow.removeFromRight (70).withHeight (24).withY (headerRow.getY()));
+    headerRow.removeFromRight (6);
+    removeLayerButton.setBounds (headerRow.removeFromRight (70).withHeight (24).withY (headerRow.getY()));
 
     content.removeFromTop (8);
     rangeBarBounds = content.removeFromTop (34);

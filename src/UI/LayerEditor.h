@@ -67,6 +67,7 @@ private:
     MinigunAudioProcessor& processor;
 
     juce::TextButton addLayerButton { "+ Layer" };
+    juce::TextButton removeLayerButton { "- Layer" }; // deletes the selected layer
     juce::Viewport rowsViewport;
 
     class RowsContainer;
