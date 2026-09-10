@@ -234,7 +234,7 @@ private:
 
         for (auto& c : chips)
         {
-            auto r = place (c->preferredWidth());
+            auto r = place (juce::jmin (c->preferredWidth(), rightLimit - startX)); // long names are ellipsised, never overlap the x button
             if (apply) const_cast<SampleChip*> (c.get())->setBounds (r);
         }
         auto r = place (AddChip::preferredWidth);
