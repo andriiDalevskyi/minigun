@@ -20,6 +20,8 @@ juce_add_plugin(Minigun
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD FALSE
     VST3_CATEGORIES Instrument Sampler
+    ICON_BIG "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon_512.png"
+    ICON_SMALL "${CMAKE_CURRENT_SOURCE_DIR}/resources/icon_64.png"
     PRODUCT_NAME "Minigun")
 
 juce_generate_juce_header(Minigun)
