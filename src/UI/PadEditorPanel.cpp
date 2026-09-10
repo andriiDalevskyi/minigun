@@ -162,6 +162,8 @@ PadEditorPanel::PadEditorPanel (MinigunAudioProcessor& processorIn) : processor 
         k->valueLabel.setFont (MinigunLookAndFeel::monoFont (11.0f));
         k->valueLabel.setJustificationType (juce::Justification::centred);
         k->valueLabel.setColour (juce::Label::textColourId, MinigunLookAndFeel::text);
+        k->nameLabel.setInterceptsMouseClicks (false, false);  // let clicks on labels reach the panel (focus release)
+        k->valueLabel.setInterceptsMouseClicks (false, false);
         addAndMakeVisible (k->slider);
         addAndMakeVisible (k->nameLabel);
         addAndMakeVisible (k->valueLabel);
