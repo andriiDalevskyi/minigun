@@ -9,6 +9,7 @@
 #include "UI/HeaderBar.h"
 #include "UI/PadGrid.h"
 #include "UI/PadEditorPanel.h"
+#include "UI/AdvancedPanel.h"
 #include "UI/LayerEditor.h"
 #include "UI/BrowserPanel.h"
 
@@ -42,6 +43,7 @@ private:
     minigun::HeaderBar header;
     minigun::PadGrid padGrid;
     minigun::PadEditorPanel padEditor;
+    minigun::AdvancedPanel advanced;
     minigun::LayerEditor layerEditor;
     minigun::BrowserPanel browser;
 

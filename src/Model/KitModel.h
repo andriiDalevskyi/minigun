@@ -13,6 +13,11 @@ namespace minigun
 constexpr int kNumPads = 16;
 constexpr int kMaxLayers = 8;
 
+/** Humanize amounts forced on every pad while Kit::triggerMode is on (see Pad::rndPitchCents).
+    Tuned for programmed metal: enough to break the machine-gun, too little to hear as detune. */
+constexpr float kTriggerModeRndPitchCents = 10.0f;
+constexpr float kTriggerModeRndVolDb = 1.0f;
+
 enum class PlayMode { RoundRobin, Random };
 
 /** Stereo = normal panned output. MonoLeft/MonoRight = the pad's signal is folded to mono
@@ -52,6 +57,8 @@ struct Pad
     OutputMode outputMode = OutputMode::Stereo;
     bool monoSum = true;               // mono modes only: true = sum L+R of a stereo sample, false = pick the matching side
     bool velocityToVolume = true;      // true = MIDI velocity scales the voice gain; false = every hit plays at full level
+    float rndPitchCents = 0.0f;        // 0..50: +/- random detune per hit (0 = off)
+    float rndVolDb = 0.0f;             // 0..6: +/- random level per hit (0 = off)
     std::vector<VelocityLayer> layers; // sorted by lo ascending, contiguous 1..127 when non-empty
 
     bool isEmpty() const noexcept
@@ -90,6 +97,9 @@ struct Kit
     juce::String name { "Untitled Kit" };
     juce::File folder;                 // invalid until saved/loaded
     std::array<Pad, kNumPads> pads;
+    /** Trigger mode: the kit is played from a programmed/replaced MIDI track rather than by hand,
+        so every pad humanizes with the kTriggerModeRnd* amounts and the per-pad knobs are ignored. */
+    bool triggerMode = false;
 
     Kit()
     {
@@ -121,6 +131,7 @@ struct Kit
         root->setProperty ("format", "minigun-kit");
         root->setProperty ("version", 1);
         root->setProperty ("name", name);
+        root->setProperty ("triggerMode", triggerMode);
 
         juce::Array<juce::var> padArr;
         for (int i = 0; i < kNumPads; ++i)
@@ -144,6 +155,8 @@ struct Kit
                                                                                 : "stereo");
             po->setProperty ("monoSum", p.monoSum);
             po->setProperty ("velToVol", p.velocityToVolume);
+            po->setProperty ("rndPitchCents", p.rndPitchCents);
+            po->setProperty ("rndVolDb", p.rndVolDb);
 
             juce::Array<juce::var> layerArr;
             for (auto& l : p.layers)
@@ -177,6 +190,7 @@ struct Kit
 
         Kit fresh;
         fresh.name = root.getProperty ("name", "Untitled Kit").toString();
+        fresh.triggerMode = (bool) root.getProperty ("triggerMode", false);
         fresh.folder = relativeTo;
 
         if (auto* padArr = root.getProperty ("pads", juce::var()).getArray())
@@ -206,6 +220,8 @@ struct Kit
                 }
                 p.monoSum = (bool) pv.getProperty ("monoSum", true);
                 p.velocityToVolume = (bool) pv.getProperty ("velToVol", true); // older kits had no key: keep the classic behaviour
+                p.rndPitchCents = juce::jlimit (0.0f, 50.0f, (float) pv.getProperty ("rndPitchCents", 0.0f));
+                p.rndVolDb = juce::jlimit (0.0f, 6.0f, (float) pv.getProperty ("rndVolDb", 0.0f));
 
                 p.layers.clear();
                 if (auto* layerArr = pv.getProperty ("layers", juce::var()).getArray())

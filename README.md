@@ -13,6 +13,9 @@ Lightweight VST3 / Standalone drum sampler built with JUCE 8. Sixteen MPC-style 
 - **Drag & drop inside the plug-in**: drag a pad onto another pad to move it (with confirmation), drag a sample chip to reorder it or move it to another layer (Ctrl on drop copies).
 - **Per-pad settings**: MIDI note (drop-down + number field, MIDI learn), choke group, volume, pan, pitch ±12 st, attack / decay / release.
 - **Velocity → volume switch** (**VEL**, per pad): on = velocity scales the level (default), off = every hit plays at full level while the velocity still picks the layer. Ctrl+click the button to set all 16 pads at once.
+- **Humanize** (advanced strip under the pads): **RND PITCH** (±0–50 cents) and **RND VOL** (±0–6 dB) draw a fresh random offset on every hit, so a repeated sample stops combing into a machine-gun. **TRIG** applies 10 c / 1.0 dB to all 16 pads for kits played from a programmed or drum-replaced MIDI track. Timing is never randomised.
+- **Sample-accurate MIDI**: a note starts on the exact sample it arrives on, not on the audio-buffer boundary — no timing jitter against other instruments.
+- **Knob handling**: every knob has a typable value field under it (`L40`, `Full`, `OFF` are understood) and Ctrl+click (or double-click) resets it to its default.
 - **Outputs**: Main + 16 aux stereo buses (34 channels). Each pad picks its bus and can go **stereo** or **mono** to a single channel, with optional stereo-to-mono summing.
 - **Pads glow in the colour of the layer that played**, from MIDI and from mouse clicks alike.
 - **Undo / Redo** for every kit edit (header buttons, Ctrl+Z / Ctrl+Y), with knob sweeps and typing merged into single steps.
@@ -110,6 +113,9 @@ Binaries in the Releases section are built from this source; the corresponding s
 - **Drag & drop усередині плагіна**: пед перетягується на інший пед (з підтвердженням), семпл-чіп — на іншу позицію в леєрі або в інший леєр (Ctrl при відпусканні копіює).
 - **Налаштування педа**: MIDI-нота (дропдаун + числове поле, MIDI learn), choke-група, гучність, панорама, висота ±12 півтонів, attack / decay / release.
 - **Перемикач velocity → гучність** (**VEL**, окремо на кожен пед): увімкнено — velocity масштабує рівень (типово), вимкнено — кожен удар грає на повній гучності, а velocity все одно обирає леєр. Ctrl+клік по кнопці — одразу на всі 16 педів.
+- **Гуманайзер** (смуга Advanced під педами): **RND PITCH** (±0–50 центів) і **RND VOL** (±0–6 dB) дають новий випадковий зсув на кожен удар, тож повторюваний семпл перестає збиватися в «кулемет». **TRIG** застосовує 10 c / 1,0 dB до всіх 16 педів — для кітів, що грають із запрограмованого або drum-replaced MIDI-треку. Тайминг не рандомізується.
+- **Семпл-точний MIDI**: нота стартує рівно на тому семплі, на якому прийшла, а не на межі аудіо-буфера — жодного джитеру відносно інших інструментів.
+- **Робота з крутилками**: під кожною є поле для введення значення (розуміє `L40`, `Full`, `OFF`), а Ctrl+клік (або подвійний клік) повертає дефолт.
 - **Виходи**: Main + 16 додаткових стерео-шин (34 канали). Кожен пед обирає шину і може йти **стерео** або **моно** на один канал, з опційним сумуванням стерео-семпла в моно.
 - **Педи світяться кольором леєра, який зіграв**, і від MIDI, і від кліку мишею.
 - **Undo / Redo** для всіх змін кіта (кнопки в шапці, Ctrl+Z / Ctrl+Y); обертання регулятора чи набір назви — один крок.

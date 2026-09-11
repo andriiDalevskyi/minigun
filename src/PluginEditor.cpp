@@ -13,6 +13,7 @@ MinigunAudioProcessorEditor::MinigunAudioProcessorEditor (MinigunAudioProcessor&
       audioProcessor (p),
       header (p),
       padEditor (p),
+      advanced (p),
       layerEditor (p),
       browser (p)
 {
@@ -28,6 +29,7 @@ MinigunAudioProcessorEditor::MinigunAudioProcessorEditor (MinigunAudioProcessor&
     addAndMakeVisible (header);
     addAndMakeVisible (padGrid);
     addAndMakeVisible (padEditor);
+    addAndMakeVisible (advanced);
     addAndMakeVisible (layerEditor);
     addAndMakeVisible (browser);
 
@@ -268,6 +270,7 @@ void MinigunAudioProcessorEditor::refreshAll()
 
     padGrid.refresh (kit, sel);
     padEditor.refresh();
+    advanced.refresh();
     layerEditor.refresh();
     browser.setCurrentLayerNumber (layerEditor.getSelectedLayer() + 1);
     header.refreshKitInfo();
@@ -353,7 +356,9 @@ void MinigunAudioProcessorEditor::resized()
 
     footerBounds = area.removeFromBottom (28).reduced (24, 0);
 
-    auto body = area.reduced (24, 20);
+    auto body = area.reduced (24, 0);
+    body.removeFromTop (18);
+    body.removeFromBottom (10);
 
     auto padCol = body.removeFromLeft (518); // 4 x 128 + 3 x 2 (pads carry a 5px outline margin)
     body.removeFromLeft (15);
@@ -361,7 +366,11 @@ void MinigunAudioProcessorEditor::resized()
     body.removeFromLeft (20);
     auto browserCol = body; // absorbs any remainder so the fixed window never overflows
 
+    // Pad grid + its caption row on top, the advanced (humanize) strip at the bottom left.
+    auto advancedArea = padCol.removeFromBottom (AdvancedPanel::kPreferredHeight);
+    padCol.removeFromBottom (6);
     padGrid.setBounds (padCol);
+    advanced.setBounds (advancedArea);
 
     auto padEditorArea = midCol.removeFromTop (PadEditorPanel::kPreferredHeight);
     midCol.removeFromTop (14);

@@ -6,6 +6,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Model/KitModel.h"
 #include "ClickFocusTextEditor.h"
+#include "KnobControl.h"
 #include <array>
 #include <functional>
 
@@ -52,13 +53,7 @@ private:
     juce::TextButton sumButton    { "SUM" };
     juce::TextButton velButton    { "VEL" };
 
-    struct Knob
-    {
-        juce::Slider slider;
-        juce::Label nameLabel;
-        juce::Label valueLabel;
-    };
-    std::array<std::unique_ptr<Knob>, 6> knobs; // Vol, Pan, Pitch, Atk, Dec, Rel
+    std::array<std::unique_ptr<KnobControl>, 6> knobs; // Vol, Pan, Pitch, Atk, Dec, Rel
 
     juce::Rectangle<int> badgeBounds;
 
@@ -66,7 +61,6 @@ private:
     int currentPadIndex = 0;
 
     void timerCallback() override;
-    void updateKnobLabel (int index);
     void writeAndNotify (std::function<void()> mutator);
 
     /** Rebuilds the OUT combo's item text for the given output mode (item ids stay 1..17 = bus index + 1). */

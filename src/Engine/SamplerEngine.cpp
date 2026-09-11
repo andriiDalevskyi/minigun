@@ -139,8 +139,17 @@ void SamplerEngine::triggerPadInternal (int padIndex, int velocity) noexcept
             if (v.isActive() && v.getChokeGroup() == pad.chokeGroup)
                 v.triggerRelease();
 
+    // Humanize: a fresh +/- offset per hit, so repeated identical samples stop combing into a
+    // machine-gun. Applied as plain offsets to the pad's own pitch/volume, nothing else changes.
+    float pitchSemitones = pad.pitchSemitones;
+    float volumeDb = pad.volumeDb;
+    if (pad.rndPitchCents > 0.0f)
+        pitchSemitones += (random.nextFloat() * 2.0f - 1.0f) * pad.rndPitchCents / 100.0f;
+    if (pad.rndVolDb > 0.0f)
+        volumeDb += (random.nextFloat() * 2.0f - 1.0f) * pad.rndVolDb;
+
     Voice* voice = stealVoice();
-    voice->start (sampleToPlay, velocity, pad.velocityToVolume, pad.volumeDb, pad.pan, pad.pitchSemitones,
+    voice->start (sampleToPlay, velocity, pad.velocityToVolume, volumeDb, pad.pan, pitchSemitones,
                   pad.attackMs, pad.decayMs, pad.releaseMs, currentSampleRate,
                   padIndex, pad.chokeGroup, pad.output, pad.outputMode, pad.monoSum, ++voiceStartCounter);
 
@@ -202,14 +211,6 @@ void SamplerEngine::processBlock (juce::AudioProcessor& proc, juce::AudioBuffer<
         triggerPadInternal (triggerBuffer[(size_t) (start2 + i)].padIndex, triggerBuffer[(size_t) (start2 + i)].velocity);
     triggerFifo.finishedRead (size1 + size2);
 
-    // Incoming MIDI note-ons (note-off ignored: one-shot playback).
-    for (const auto metadata : midiMessages)
-    {
-        auto msg = metadata.getMessage();
-        if (msg.isNoteOn())
-            handleNoteOn (msg.getNoteNumber(), msg.getVelocity());
-    }
-
     const int numSamples = buffer.getNumSamples();
 
     // Resolve each output bus's sub-buffer + whether it is currently usable (enabled and
@@ -231,18 +232,48 @@ void SamplerEngine::processBlock (juce::AudioProcessor& proc, juce::AudioBuffer<
         usableBusCount.store (usable, std::memory_order_relaxed);
     }
 
-    for (auto& v : voices)
+    // Renders every active voice for [start, start + length) of this block.
+    auto renderSlice = [&] (int start, int length) noexcept
     {
-        if (! v.isActive())
+        if (length <= 0)
+            return;
+
+        for (auto& v : voices)
+        {
+            if (! v.isActive())
+                continue;
+            int bus = v.getTargetBus();
+            if (bus < 0 || bus >= numBuses || ! busUsable[(size_t) bus])
+                bus = 0; // fall back to Main
+            v.renderNextBlock (busBuffers[(size_t) bus], start, length);
+        }
+
+        if (previewVoice.isActive() && numBuses > 0)
+            previewVoice.renderNextBlock (busBuffers[0], start, length);
+    };
+
+    // Sample-accurate MIDI: render up to each note-on's offset inside the block, start the
+    // voice there, then carry on. Without this every hit would snap to the block boundary,
+    // which is audible as timing jitter / phasing against other instruments.
+    // (Note-offs are ignored: one-shot playback.)
+    int cursor = 0;
+    for (const auto metadata : midiMessages)
+    {
+        const auto msg = metadata.getMessage();
+        if (! msg.isNoteOn())
             continue;
-        int bus = v.getTargetBus();
-        if (bus < 0 || bus >= numBuses || ! busUsable[(size_t) bus])
-            bus = 0; // fall back to Main
-        v.renderNextBlock (busBuffers[(size_t) bus], 0, numSamples);
+
+        const int offset = juce::jlimit (0, numSamples, metadata.samplePosition);
+        if (offset > cursor)
+        {
+            renderSlice (cursor, offset - cursor);
+            cursor = offset;
+        }
+
+        handleNoteOn (msg.getNoteNumber(), msg.getVelocity());
     }
 
-    if (previewVoice.isActive() && numBuses > 0)
-        previewVoice.renderNextBlock (busBuffers[0], 0, numSamples);
+    renderSlice (cursor, numSamples - cursor);
 
     int active = 0;
     for (auto& v : voices)

@@ -37,6 +37,8 @@ struct EnginePad
     OutputMode outputMode = OutputMode::Stereo;
     bool monoSum = true;
     bool velocityToVolume = true;
+    float rndPitchCents = 0.0f; // already resolved: trigger mode substitutes its own amounts at build() time
+    float rndVolDb = 0.0f;
     std::vector<EngineLayer> layers;
 };
 

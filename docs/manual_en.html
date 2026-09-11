@@ -10,7 +10,7 @@
 <section class="cover">
   <div class="brand">MINIGUN</div>
   <h1>Minigun Drum Sampler</h1>
-  <div class="sub">User Manual · VST3 &amp; Standalone · version 0.3.9</div>
+  <div class="sub">User Manual · VST3 &amp; Standalone · version 0.4.0</div>
   <img src="img/ui_full.png" alt="Minigun main window">
   <div class="meta">16 pads · velocity layers · round-robin / random · portable kits · 17 stereo outputs<br>Windows 10/11, 64-bit. Built with JUCE 8.</div>
 </section>
@@ -31,6 +31,7 @@
 <ol class="callouts">
   <li><strong>Header</strong> — kit name, Save / Load kit, Undo / Redo, MIDI indicator, output meter, master volume.</li>
   <li><strong>Pads</strong> — 16 pads in MPC order (pad 1 bottom-left, pad 13 top-left). Click to play, drop audio files to assign.</li>
+  <li><strong>Advanced strip</strong> — under the pads: per-hit humanize (RND PITCH / RND VOL) and the kit-wide TRIG switch.</li>
   <li><strong>Pad editor</strong> — every setting of the selected pad: name, note, choke, output, mix and envelope knobs.</li>
   <li><strong>Velocity layers</strong> — the velocity map of the selected pad and the samples inside each layer.</li>
   <li><strong>Browser</strong> — a file browser with instant preview; drag files onto pads or layers.</li>
@@ -110,6 +111,21 @@
   <figure><img src="img/ui_note_popup.png" alt="Note drop-down"><figcaption>The NOTE drop-down lists all 128 notes with their numbers.</figcaption></figure>
   <figure><img src="img/ui_out_popup.png" alt="Output drop-down"><figcaption>The OUT drop-down: Main plus 16 stereo pairs.</figcaption></figure>
 </div>
+
+<h3>Knob gestures</h3>
+<p>Every knob has a value field under it. <strong>Click the field, type a value and press <kbd>Enter</kbd></strong> to set it exactly; the field accepts what it shows, so Pan takes <code>L40</code>, <code>C</code> or <code>R75</code> and Dec takes <code>Full</code>. <strong><kbd>Ctrl</kbd>+click a knob</strong> (or double-click it) snaps it back to its default: 0.0 dB, C, 0 st, 0 ms attack, Full decay, 120 ms release, and OFF for the two RND knobs.</p>
+
+<h3>Advanced &middot; Humanize</h3>
+<figure><img src="img/ui_advanced.png" alt="Advanced humanize strip"><figcaption>The advanced strip sits under the pads: TRIG, RND PITCH and RND VOL.</figcaption></figure>
+<p>When the same sample is fired again and again — blast beats, double kick, a snare roll — every hit is bit-for-bit identical, they comb with each other and the part starts to sound like a machine-gun instead of a drummer. Round-robin samples fix that when you have them; humanize fixes it when you do not.</p>
+<table>
+  <tr><th>Control</th><th>What it does</th></tr>
+  <tr><td>RND PITCH</td><td>Per-pad random detune, <strong>0 … 50 cents</strong> either way, drawn fresh on every hit. 8–12 c is enough to break the combing while staying inaudible as detune; past ~25 c the drum starts to sound out of tune. This is the knob that kills the machine-gun effect.</td></tr>
+  <tr><td>RND VOL</td><td>Per-pad random level, <strong>0 … 6 dB</strong> either way, fresh on every hit. 0.5–1.5 dB makes a repeated hit breathe; above 2 dB the groove begins to wobble.</td></tr>
+  <tr><td>TRIG</td><td>Trigger mode for the whole kit: switch it on when the kit is played from a programmed or drum-replaced MIDI track rather than by hand. Every pad then humanizes by <strong>10 cents and 1.0 dB</strong> and the two knobs are locked (they show the amount being applied). Switch it off and each pad goes back to its own values.</td></tr>
+</table>
+<p><strong>Timing is never touched.</strong> Minigun starts every note exactly on the sample it arrives on, so humanize adds no shuffle, no flam and no latency — the groove stays as tight as it was programmed.</p>
+<p class="small">Example — a 16th-note double-kick pattern on one sample: set RND PITCH to 10 c and RND VOL to 1.0 dB (or just press TRIG). The individual hits stop cancelling each other and the run reads as a drummer's foot instead of one sample looped.</p>
 
 <h2 class="pagebreak">6. Velocity layers</h2>
 <figure><img src="img/ui_layers.png" alt="Velocity layers panel"><figcaption>Three layers on the Kick pad. Layer 2 holds two samples that alternate round-robin.</figcaption></figure>
@@ -229,6 +245,8 @@
   <tr><td>Chip</td><td>Click / click ×</td><td>Preview / remove sample</td></tr>
   <tr><td>Chip</td><td>Drag (hold <kbd>Ctrl</kbd> to copy)</td><td>Reorder inside the layer or move to another layer</td></tr>
   <tr><td>VEL button</td><td><kbd>Ctrl</kbd>+click</td><td>Set velocity &rarr; volume for all 16 pads</td></tr>
+  <tr><td>Any knob</td><td><kbd>Ctrl</kbd>+click or double-click</td><td>Back to the default value</td></tr>
+  <tr><td>Value field under a knob</td><td>Type a value + <kbd>Enter</kbd></td><td>Set the knob exactly (<code>L40</code>, <code>Full</code>, <code>OFF</code> are understood)</td></tr>
   <tr><td>NOTE drop-down</td><td>Mouse wheel</td><td>±1 semitone</td></tr>
   <tr><td>Browser</td><td><kbd>Backspace</kbd></td><td>Up one folder</td></tr>
   <tr><td>Browser</td><td>Mouse Back / Forward, <kbd>Alt</kbd>+<kbd>←</kbd>/<kbd>→</kbd></td><td>History back / forward</td></tr>
@@ -250,8 +268,9 @@
   <tr><td>Pads light but a pad is silent</td><td>Its samples may be missing (moved or renamed on disk). Re-add them; then SAVE KIT so they are copied into the kit folder.</td></tr>
   <tr><td>Pad routed to Out 5-6 comes out of Main</td><td>The host has not enabled that bus. Increase the track channel count or enable the plug-in's outputs; the footer <em>outs</em> value shows how many are active.</td></tr>
   <tr><td>Plug-in not listed in the DAW</td><td>Make sure <code>Minigun.vst3</code> is in <code>C:\Program Files\Common Files\VST3</code> and rescan plug-ins.</td></tr>
+  <tr><td>A pad sounds a hair late or phasey against another instrument</td><td>Minigun has been sample-accurate since v0.4.0 (hits used to snap to the audio-buffer boundary). If something still drifts, it is the source track's plug-in latency: a MIDI send does not carry PDC compensation, so the notes leave the sending track already shifted.</td></tr>
   <tr><td>Wrong pad plays from the keyboard</td><td>Check NOTE on each pad; several pads may share a note. Use LEARN to assign quickly.</td></tr>
 </table>
-<p class="small">Minigun v0.3 · Dallas Audio · Manual generated September 2026.</p>
+<p class="small">Minigun v0.4 · Dallas Audio · Manual generated September 2026.</p>
 </body>
 </html>

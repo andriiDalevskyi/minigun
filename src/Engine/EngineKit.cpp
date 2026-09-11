@@ -29,6 +29,9 @@ std::shared_ptr<const EngineKit> EngineKit::build (const Kit& kit, SampleLoader&
         dst.outputMode = src.outputMode;
         dst.monoSum = src.monoSum;
         dst.velocityToVolume = src.velocityToVolume;
+        // Trigger mode overrides the per-pad humanize amounts for the whole kit.
+        dst.rndPitchCents = kit.triggerMode ? kTriggerModeRndPitchCents : src.rndPitchCents;
+        dst.rndVolDb = kit.triggerMode ? kTriggerModeRndVolDb : src.rndVolDb;
 
         dst.layers.reserve (src.layers.size());
         for (auto& srcLayer : src.layers)

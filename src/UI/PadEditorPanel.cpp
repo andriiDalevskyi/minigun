@@ -38,6 +38,29 @@ namespace
         return juce::String ((int) std::round (ms)) + " ms";
     }
 
+    // Typed-value parsers for the knob fields: forgiving about the unit suffix the field shows.
+    double parsePlainNumber (const juce::String& t) { return t.getDoubleValue(); }
+
+    double parsePan (const juce::String& t)
+    {
+        auto s = t.trim().toUpperCase();
+        if (s.isEmpty() || s == "C" || s == "0") return 0.0;
+        if (s.startsWithChar ('L') || s.startsWithChar ('R'))
+        {
+            const double pct = s.substring (1).getDoubleValue();
+            return (s.startsWithChar ('L') ? -1.0 : 1.0) * pct / 100.0;
+        }
+        const double v = s.getDoubleValue();
+        return std::abs (v) > 1.0 ? v / 100.0 : v; // "-50" reads as 50% left, "-0.5" as the raw value
+    }
+
+    double parseDecay (const juce::String& t)
+    {
+        auto s = t.trim().toUpperCase();
+        if (s.startsWithChar ('F')) return 5001.0; // "Full"
+        return s.getDoubleValue();
+    }
+
     juce::String noteComboText (int note)
     {
         return noteToShortName (note) + juce::String::fromUTF8 (" \xC2\xB7 ") + juce::String (note);
@@ -160,51 +183,59 @@ PadEditorPanel::PadEditorPanel (MinigunAudioProcessor& processorIn) : processor 
     };
     addAndMakeVisible (velButton);
 
-    static const char* names[6]  = { "Vol", "Pan", "Pitch", "Atk", "Dec", "Rel" };
+    // Six knobs: Ctrl+click resets to the default, the field under each one takes a typed value.
+    struct KnobSpec
+    {
+        const char* caption;
+        double lo, hi, interval, defaultValue;
+        juce::String (*format) (float);
+        double (*parse) (const juce::String&);
+        bool teal;
+        const char* tooltip;
+    };
+
+    static const KnobSpec specs[6] =
+    {
+        { "Vol",   -60.0,  12.0, 0.1,    0.0, formatDb,        parsePlainNumber, false, "Pad level" },
+        { "Pan",    -1.0,   1.0, 0.01,   0.0, formatPan,       parsePan,         false, "Pan (type L50 / C / R50)" },
+        { "Pitch", -12.0,  12.0, 0.1,    0.0, formatSemitones, parsePlainNumber, false, "Transpose in semitones" },
+        { "Atk",     0.0, 500.0, 1.0,    0.0, formatMs,        parsePlainNumber, true,  "Attack" },
+        { "Dec",     1.0, 5001.0, 1.0, 5001.0, nullptr,        parseDecay,       true,  "Decay (type Full for the whole sample)" },
+        { "Rel",     1.0, 2000.0, 1.0,  120.0, formatMs,       parsePlainNumber, true,  "Release" }
+    };
+
     for (int i = 0; i < 6; ++i)
     {
-        auto k = std::make_unique<Knob>();
-        k->slider.setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
-        k->slider.setTextBoxStyle (juce::Slider::NoTextBox, true, 0, 0);
-        k->nameLabel.setText (names[i], juce::dontSendNotification);
-        k->nameLabel.setFont (MinigunLookAndFeel::labelFont (10.0f));
-        k->nameLabel.setJustificationType (juce::Justification::centred);
-        k->nameLabel.setColour (juce::Label::textColourId, MinigunLookAndFeel::label);
-        k->valueLabel.setFont (MinigunLookAndFeel::monoFont (11.0f));
-        k->valueLabel.setJustificationType (juce::Justification::centred);
-        k->valueLabel.setColour (juce::Label::textColourId, MinigunLookAndFeel::text);
-        k->nameLabel.setInterceptsMouseClicks (false, false);  // let clicks on labels reach the panel (focus release)
-        k->valueLabel.setInterceptsMouseClicks (false, false);
-        k->slider.onDragStart = [this] { processor.beginUndoGesture(); }; // a whole knob sweep = one undo step
-        k->slider.onDragEnd   = [this] { processor.endUndoGesture(); };
-        addAndMakeVisible (k->slider);
-        addAndMakeVisible (k->nameLabel);
-        addAndMakeVisible (k->valueLabel);
+        auto& spec = specs[i];
+        auto k = std::make_unique<KnobControl> (spec.caption);
+        k->setRange (spec.lo, spec.hi, spec.interval);
+        k->setDefaultValue (spec.defaultValue);
+        k->setTooltipText (spec.tooltip);
+
+        if (auto* fmt = spec.format)
+            k->format = [fmt] (double v) { return fmt ((float) v); };
+        else
+            k->format = [] (double v) { return v >= 5001.0 ? juce::String ("Full") : formatMs ((float) v); };
+
+        auto* parseFn = spec.parse;
+        k->parse = [parseFn] (const juce::String& t) { return parseFn (t); };
+
+        if (spec.teal)
+            k->setThumbColour (MinigunLookAndFeel::teal);
+
+        k->onGestureStart = [this] { processor.beginUndoGesture(); }; // a whole knob sweep = one undo step
+        k->onGestureEnd   = [this] { processor.endUndoGesture(); };
+
+        addAndMakeVisible (*k);
         knobs[(size_t) i] = std::move (k);
     }
 
-    knobs[0]->slider.setRange (-60.0, 12.0, 0.1);
-    knobs[1]->slider.setRange (-1.0, 1.0, 0.01);
-    knobs[2]->slider.setRange (-12.0, 12.0, 0.1);
-    knobs[3]->slider.setRange (0.0, 500.0, 1.0);
-    knobs[4]->slider.setRange (1.0, 5001.0, 1.0); // 5001 == "Full" (decayMs = -1)
-    knobs[5]->slider.setRange (1.0, 2000.0, 1.0);
-
-    knobs[3]->slider.setColour (juce::Slider::thumbColourId, MinigunLookAndFeel::teal);
-    knobs[4]->slider.setColour (juce::Slider::thumbColourId, MinigunLookAndFeel::teal);
-    knobs[5]->slider.setColour (juce::Slider::thumbColourId, MinigunLookAndFeel::teal);
-
-    knobs[0]->slider.onValueChange = [this] { writeAndNotify ([this] { processor.getKit().pads[(size_t) currentPadIndex].volumeDb = (float) knobs[0]->slider.getValue(); }); updateKnobLabel (0); };
-    knobs[1]->slider.onValueChange = [this] { writeAndNotify ([this] { processor.getKit().pads[(size_t) currentPadIndex].pan = (float) knobs[1]->slider.getValue(); }); updateKnobLabel (1); };
-    knobs[2]->slider.onValueChange = [this] { writeAndNotify ([this] { processor.getKit().pads[(size_t) currentPadIndex].pitchSemitones = (float) knobs[2]->slider.getValue(); }); updateKnobLabel (2); };
-    knobs[3]->slider.onValueChange = [this] { writeAndNotify ([this] { processor.getKit().pads[(size_t) currentPadIndex].attackMs = (float) knobs[3]->slider.getValue(); }); updateKnobLabel (3); };
-    knobs[4]->slider.onValueChange = [this]
-    {
-        double v = knobs[4]->slider.getValue();
-        writeAndNotify ([this, v] { processor.getKit().pads[(size_t) currentPadIndex].decayMs = v >= 5001.0 ? -1.0f : (float) v; });
-        updateKnobLabel (4);
-    };
-    knobs[5]->slider.onValueChange = [this] { writeAndNotify ([this] { processor.getKit().pads[(size_t) currentPadIndex].releaseMs = (float) knobs[5]->slider.getValue(); }); updateKnobLabel (5); };
+    knobs[0]->onValueChange = [this] (double v) { writeAndNotify ([this, v] { processor.getKit().pads[(size_t) currentPadIndex].volumeDb = (float) v; }); };
+    knobs[1]->onValueChange = [this] (double v) { writeAndNotify ([this, v] { processor.getKit().pads[(size_t) currentPadIndex].pan = (float) v; }); };
+    knobs[2]->onValueChange = [this] (double v) { writeAndNotify ([this, v] { processor.getKit().pads[(size_t) currentPadIndex].pitchSemitones = (float) v; }); };
+    knobs[3]->onValueChange = [this] (double v) { writeAndNotify ([this, v] { processor.getKit().pads[(size_t) currentPadIndex].attackMs = (float) v; }); };
+    knobs[4]->onValueChange = [this] (double v) { writeAndNotify ([this, v] { processor.getKit().pads[(size_t) currentPadIndex].decayMs = v >= 5001.0 ? -1.0f : (float) v; }); };
+    knobs[5]->onValueChange = [this] (double v) { writeAndNotify ([this, v] { processor.getKit().pads[(size_t) currentPadIndex].releaseMs = (float) v; }); };
 
     startTimerHz (15);
 }
@@ -306,31 +337,14 @@ void PadEditorPanel::refresh()
 
     velButton.setToggleState (pad.velocityToVolume, juce::dontSendNotification);
 
-    knobs[0]->slider.setValue (pad.volumeDb, juce::dontSendNotification);
-    knobs[1]->slider.setValue (pad.pan, juce::dontSendNotification);
-    knobs[2]->slider.setValue (pad.pitchSemitones, juce::dontSendNotification);
-    knobs[3]->slider.setValue (pad.attackMs, juce::dontSendNotification);
-    knobs[4]->slider.setValue (pad.decayMs < 0.0f ? 5001.0 : pad.decayMs, juce::dontSendNotification);
-    knobs[5]->slider.setValue (pad.releaseMs, juce::dontSendNotification);
-
-    for (int i = 0; i < 6; ++i) updateKnobLabel (i);
+    knobs[0]->setValue (pad.volumeDb);
+    knobs[1]->setValue (pad.pan);
+    knobs[2]->setValue (pad.pitchSemitones);
+    knobs[3]->setValue (pad.attackMs);
+    knobs[4]->setValue (pad.decayMs < 0.0f ? 5001.0 : pad.decayMs);
+    knobs[5]->setValue (pad.releaseMs);
 
     repaint();
-}
-
-void PadEditorPanel::updateKnobLabel (int index)
-{
-    auto& pad = processor.getKit().pads[(size_t) currentPadIndex];
-    switch (index)
-    {
-        case 0: knobs[0]->valueLabel.setText (formatDb (pad.volumeDb), juce::dontSendNotification); break;
-        case 1: knobs[1]->valueLabel.setText (formatPan (pad.pan), juce::dontSendNotification); break;
-        case 2: knobs[2]->valueLabel.setText (formatSemitones (pad.pitchSemitones), juce::dontSendNotification); break;
-        case 3: knobs[3]->valueLabel.setText (formatMs (pad.attackMs), juce::dontSendNotification); break;
-        case 4: knobs[4]->valueLabel.setText (pad.decayMs < 0.0f ? "Full" : formatMs (pad.decayMs), juce::dontSendNotification); break;
-        case 5: knobs[5]->valueLabel.setText (formatMs (pad.releaseMs), juce::dontSendNotification); break;
-        default: break;
-    }
 }
 
 void PadEditorPanel::timerCallback()
@@ -405,13 +419,7 @@ void PadEditorPanel::resized()
     auto knobRow = area.removeFromTop (area.getHeight());
     int knobW = knobRow.getWidth() / 6;
     for (int i = 0; i < 6; ++i)
-    {
-        auto col = knobRow.removeFromLeft (i == 5 ? knobRow.getWidth() : knobW);
-        auto sliderArea = col.removeFromTop (40);
-        knobs[(size_t) i]->slider.setBounds (sliderArea.withSizeKeepingCentre (40, 40));
-        knobs[(size_t) i]->nameLabel.setBounds (col.removeFromTop (14));
-        knobs[(size_t) i]->valueLabel.setBounds (col.removeFromTop (14));
-    }
+        knobs[(size_t) i]->setBounds (knobRow.removeFromLeft (i == 5 ? knobRow.getWidth() : knobW));
 }
 
 void PadEditorPanel::paint (juce::Graphics& g)

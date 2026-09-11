@@ -28,6 +28,8 @@ src/
   UI/PadComponent.h/.cpp        (one pad: states empty/loaded/selected/hit/dragover)
   UI/PadGrid.h/.cpp             (4x4 grid, MPC order: pad 1 bottom-left, pad 13 top-left)
   UI/PadEditorPanel.h/.cpp      (name, note, RR/RND, choke, 6 knobs, MIDI learn)
+  UI/KnobControl.h/.cpp         (knob + caption + typable value field; Ctrl+click = default)
+  UI/AdvancedPanel.h/.cpp       (humanize strip under the pad grid: TRIG, RND PITCH, RND VOL)
   UI/LayerEditor.h/.cpp         (velocity range bar with draggable dividers + layer rows with sample chips)
   UI/BrowserPanel.h/.cpp        (file tree/list, preview toggle, waveform, "Add to Lx")
   UI/HeaderBar.h/.cpp           (logo, kit LCD, Save/Load kit, MIDI LED, meter, master knob)
@@ -180,3 +182,24 @@ slot in its own layer (reorder) or onto another layer.
   OUT 112 / mode 84 / SUM 48 / VEL 48 to stay inside the 360-px middle column). Lit = on.
   **Ctrl+click** writes the new state to all 16 pads in one undo step
   (`setVelocityToVolumeFromUI (on, applyToAllPads)`).
+
+## Sample-accurate MIDI + humanize (v0.4.0)
+
+- `SamplerEngine::processBlock` renders in slices between note-on offsets: for every MIDI event it
+  renders `[cursor, metadata.samplePosition)` through `renderSlice()`, starts the voice, then
+  continues; the tail after the last event is rendered last. Before v0.4.0 every voice was rendered
+  from sample 0 of the block, so a hit snapped to the buffer boundary — up to a full block of timing
+  jitter, audible as phasing against a sample-accurate sampler. UI triggers and the preview voice
+  still fire at the start of the block (they have no meaningful offset).
+- Humanize: `Pad::rndPitchCents` (0..50) and `Pad::rndVolDb` (0..6), JSON keys `rndPitchCents` /
+  `rndVolDb`, plus kit-wide `Kit::triggerMode` (`"triggerMode"`). `EngineKit::build()` resolves the
+  override — in trigger mode every `EnginePad` gets `kTriggerModeRndPitchCents` (10 c) and
+  `kTriggerModeRndVolDb` (1.0 dB) — so the audio thread never branches on the mode.
+  `triggerPadInternal` draws `random.nextFloat()*2-1` per hit and passes `pitch + cents/100` and
+  `volumeDb + dB` to `Voice::start`; the Voice signature is unchanged. Timing is never randomised.
+- `KnobControl` owns a `juce::Slider` (subclassed so Ctrl+click resets to the default instead of
+  starting a drag), a caption label and a `ClickFocusTextEditor` value field. The owner supplies
+  `format` (value → text) and `parse` (typed text → value), which is why the fields understand
+  `L40` / `Full` / `OFF`. Layouts: `vertical` (pad editor column) and `horizontal` (advanced strip).
+- `AdvancedPanel` (70 px) sits at the bottom of the left column; the editor body padding became
+  top 18 / bottom 10 to make room while keeping the pad-grid caption row.
